@@ -5,9 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using KabukiProject.Views; //навігація LoginView
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using KabukiProject.Models; //доступ до моделі Teacher та User
 using KabukiProject.Services; //доступ до UserService
 using KabukiProject.Interfaces; // Додано для ITeacher на всяк випадок

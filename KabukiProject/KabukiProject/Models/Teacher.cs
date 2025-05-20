@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using KabukiProject.Enums;
 using KabukiProject.Interfaces;
-using System.Collections.Generic;
 
 namespace KabukiProject.Models
 {
