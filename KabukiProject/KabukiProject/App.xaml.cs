@@ -8,13 +8,9 @@ namespace KabukiProject
 {
     public partial class App : Application
     {
-        private UserService _userService;
-
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
-
-            _userService = new UserService();
 
             var loginView = new LoginView();
             loginView.Show();
@@ -22,7 +18,6 @@ namespace KabukiProject
 
         protected override void OnExit(ExitEventArgs e)
         {
-            _userService?.SaveAllData();
             base.OnExit(e);
         }
     }

@@ -41,11 +41,8 @@ namespace KabukiProject.ViewModels
         public RelayCommand LoginCommand { get; private set; }
         public RelayCommand NavigateToRegisterCommand { get; private set; }
 
-        private readonly UserService _userService;
-
         public LoginViewModel()
         {
-            _userService = new UserService();
             LoginCommand = new RelayCommand(ExecuteLogin, CanExecuteLogin);
             NavigateToRegisterCommand = new RelayCommand(ExecuteNavigateToRegister);
         }
@@ -60,7 +57,8 @@ namespace KabukiProject.ViewModels
         {
             if (parameter is Window currentWindow)
             {
-                User authenticatedUser = _userService.AuthenticateUser(Username, Password);
+                // ВИПРАВЛЕНО: Змінено LoginUser на AuthenticateUser
+                User authenticatedUser = UserService.Instance.AuthenticateUser(Username, Password);
 
                 if (authenticatedUser != null)
                 {
@@ -83,7 +81,7 @@ namespace KabukiProject.ViewModels
                         // Якщо AdminDashboardView також матиме конструктор з User:
                         // nextWindow = new AdminDashboardView(authenticatedUser);
                         MessageBox.Show("Адміністраторська панель ще не реалізована.", "Інформація", MessageBoxButton.OK, MessageBoxImage.Information);
-                        return; //Залишимося на поточному вікні, доки не буде адмін-панелі
+                        return; // Залишимося на поточному вікні, доки не буде адмін-панелі
                     }
 
                     if (nextWindow != null)
@@ -107,9 +105,9 @@ namespace KabukiProject.ViewModels
             {
                 var registerView = new RegistrationView();
                 registerView.Show();
-                //Важново: Оновити Application.Current.MainWindow на нове вікно
+                // Важливо: Оновити Application.Current.MainWindow на нове вікно
                 Application.Current.MainWindow = registerView;
-                currentWindow.Close(); //закрить старе вікно
+                currentWindow.Close(); // закрити старе вікно
             }
         }
     }

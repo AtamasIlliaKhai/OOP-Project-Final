@@ -1,13 +1,13 @@
-﻿using System;
+﻿using KabukiProject.Enums; // Все одно потрібен для UserRole
+using KabukiProject.Models;
+using KabukiProject.Services;
+using KabukiProject.Views;
+using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
-using KabukiProject.Enums; // UserRole
-using KabukiProject.Models; // User, Student, Teacher models
-using KabukiProject.Services; // UserService
-using KabukiProject.Views; // Navigation views
+using System.Windows.Controls;
 
 namespace KabukiProject.ViewModels
 {
@@ -25,8 +25,9 @@ namespace KabukiProject.ViewModels
             }
         }
 
+        // Ці властивості тепер зберігають сирі паролі (не хешовані)
         private string _password;
-        public string Password
+        public string Password // ПРИВ'ЯЗУЄТЬСЯ ДО PasswordBox_PasswordChanged
         {
             get => _password;
             set
@@ -38,7 +39,7 @@ namespace KabukiProject.ViewModels
         }
 
         private string _confirmPassword;
-        public string ConfirmPassword
+        public string ConfirmPassword // ПРИВ'ЯЗУЄТЬСЯ ДО ConfirmPasswordBox_PasswordChanged
         {
             get => _confirmPassword;
             set
@@ -49,7 +50,7 @@ namespace KabukiProject.ViewModels
             }
         }
 
-        private string _selectedRole;
+        private string _selectedRole; // ЗМІНЕНО: Тепер це string
         public string SelectedRole
         {
             get => _selectedRole;
@@ -64,83 +65,105 @@ namespace KabukiProject.ViewModels
         public RelayCommand RegisterCommand { get; private set; }
         public RelayCommand NavigateToLoginCommand { get; private set; }
 
-        private readonly UserService _userService;
-
         public RegistrationViewModel()
         {
-            _userService = new UserService();
             RegisterCommand = new RelayCommand(ExecuteRegister, CanExecuteRegister);
             NavigateToLoginCommand = new RelayCommand(ExecuteNavigateToLogin);
-            SelectedRole = "Учень"; // Значення за замовчуванням
+
+            SelectedRole = "Учень";
+        }
+
+        // Методи для обробки зміни паролів з PasswordBox
+        // Ці методи тепер просто встановлюють значення, без хешування
+        public void OnPasswordChanged(string password)
+        {
+            Password = password;
+        }
+
+        public void OnConfirmPasswordChanged(string confirmPassword)
+        {
+            ConfirmPassword = confirmPassword;
         }
 
         private bool CanExecuteRegister(object parameter)
         {
-            // Перевіряємо, чи всі необхідні поля заповнені та паролі співпадають.
+            // Перевіряємо, чи всі поля заповнені та чи паролі співпадають
+            bool passwordsMatch = Password == ConfirmPassword;
+            bool isRoleSelected = !string.IsNullOrWhiteSpace(SelectedRole); // Перевіряємо, чи обрано роль
+
             return !string.IsNullOrWhiteSpace(Username) &&
                    !string.IsNullOrWhiteSpace(Password) &&
-                   Password == ConfirmPassword &&
-                   !string.IsNullOrWhiteSpace(SelectedRole);
+                   !string.IsNullOrWhiteSpace(ConfirmPassword) &&
+                   passwordsMatch &&
+                   isRoleSelected;
         }
 
         private void ExecuteRegister(object parameter)
         {
-            if (parameter is Window currentWindow)
+            if (UserService.Instance.IsUsernameTaken(Username))
             {
-                // Перевірка на співпадіння паролів
-                if (Password != ConfirmPassword)
-                {
-                    MessageBox.Show("Паролі не співпадають!", "Помилка реєстрації", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
+                MessageBox.Show("Користувач з таким іменем вже існує. Будь ласка, оберіть інше ім'я.", "Помилка реєстрації", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
 
-                // Логіка створення нового користувача відповідно до обраної ролі
-                User newUser;
-                // Визначаємо UserRole на основі SelectedRole з ComboBox
-                UserRole role = SelectedRole == "Учень" ? UserRole.Student : UserRole.Teacher;
+            User newUser = null;
+            UserRole roleToRegister;
 
-                if (role == UserRole.Student)
+            // --- ПОЧАТОК ЗМІН У ЦЬОМУ МЕТОДІ ---
+            string extractedRoleContent = null;
+            if (!string.IsNullOrWhiteSpace(SelectedRole))
+            {
+                // SelectedRole зараз виглядає як "System.Windows.Controls.ComboBoxItem: Учень"
+                // Нам потрібно знайти двокрапку і пробіл після неї, а потім взяти частину рядка
+                int colonIndex = SelectedRole.IndexOf(':');
+                if (colonIndex != -1 && colonIndex + 2 < SelectedRole.Length) // Перевіряємо, чи є ":" і достатньо символів після нього
                 {
-                    // Створюємо новий об'єкт Student і ПОВНІСТЮ ініціалізуємо всі його властивості.
-                    // Це КЛЮЧОВО для коректної серіалізації в JSON.
-                    newUser = new Student
-                    {
-                        Username = Username,
-                        Password = Password, // Паролі слід хешувати в реальному застосунку для безпеки!
-                        Role = UserRole.Student,
-                        FirstName = "",     // Ініціалізуємо порожнім рядком
-                        LastName = "",      // Ініціалізуємо порожнім рядком
-                        Email = "",         // Ініціалізуємо порожнім рядком
-                        Balance = 0.00m     // Ініціалізуємо нулем
-                    };
+                    // Витягуємо вміст після ": " і видаляємо зайві пробіли
+                    extractedRoleContent = SelectedRole.Substring(colonIndex + 2).Trim();
                 }
-                else // UserRole.Teacher (за припущенням, що інших ролей тут немає)
+                else
                 {
-                    // Створюємо новий об'єкт Teacher і ПОВНІСТЮ ініціалізуємо всі його властивості.
-                    // Це КЛЮЧОВО для коректної серіалізації в JSON.
+                    // Якщо формат несподіваний, або це просто "Учень" (менш ймовірно, але для безпеки),
+                    // просто використовуємо весь рядок після Trim
+                    extractedRoleContent = SelectedRole.Trim();
+                }
+            }
+            // --- КІНЕЦЬ ЗМІН У ЦЬОМУ МЕТОДІ ---
+
+
+            switch (extractedRoleContent) // Тепер switch працюватиме з "Учень" або "Викладач"
+            {
+                case "Учень":
+                    roleToRegister = UserRole.Student;
+                    newUser = new Student { Username = Username, Password = Password, Role = roleToRegister, Balance = 0 };
+                    break;
+                case "Викладач":
+                    roleToRegister = UserRole.Teacher;
                     newUser = new Teacher
                     {
                         Username = Username,
-                        Password = Password, // Паролі слід хешувати в реальному застосунку для безпеки!
-                        Role = UserRole.Teacher,
-                        IsVerified = false,  // За замовчуванням викладач не верифікований при реєстрації
-                        FirstName = "",      // Ініціалізуємо порожнім рядком
-                        LastName = "",       // Ініціалізуємо порожнім рядком
-                        Description = "",    // Ініціалізуємо порожнім рядком
-                        PricePerHour = 0.00m, // Ініціалізуємо нулем
-                        Subjects = new List<string>(), // Ініціалізуємо порожнім списком
-                        PhotoPath = ""       // Ініціалізуємо порожнім рядком
+                        Password = Password,
+                        Role = roleToRegister,
+                        FirstName = "",
+                        LastName = "",
+                        Description = "",
+                        PricePerHour = 0,
+                        PhotoPath = "",
+                        IsVerified = false,
+                        Subjects = new List<string>()
                     };
-                }
+                    break;
+                default:
+                    MessageBox.Show("Будь ласка, оберіть коректну роль (Учень або Викладач).", "Помилка реєстрації", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return; // Виходимо, якщо роль не розпізнана
+            }
 
-                // Спроба реєстрації користувача через UserService
-                if (_userService.RegisterUser(newUser))
-                {
-                    MessageBox.Show($"Користувач '{Username}' успішно зареєстрований як {SelectedRole}!", "Реєстрація успішна", MessageBoxButton.OK, MessageBoxImage.Information);
-                    // Після успішної реєстрації перенаправляємо на вікно входу
-                    ExecuteNavigateToLogin(currentWindow); // Передаємо поточне вікно для закриття
-                }
-                // Якщо реєстрація не вдалася (наприклад, ім'я користувача вже зайняте), повідомлення про помилку показано з UserService.
+            if (newUser != null)
+            {
+                UserService.Instance.RegisterUser(newUser);
+                MessageBox.Show("Реєстрація успішна! Тепер ви можете увійти.", "Успіх", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                ExecuteNavigateToLogin(parameter);
             }
         }
 
@@ -148,14 +171,9 @@ namespace KabukiProject.ViewModels
         {
             if (parameter is Window currentWindow)
             {
-                // Створюєм новоє вікно входу та відображаєм його
                 var loginView = new LoginView();
                 loginView.Show();
-
-                // Оновлюєм глвнее вікно застосунку, для норм роботи та не дать проблемам з закриттям/управлінням вікнами.
                 Application.Current.MainWindow = loginView;
-
-                // Закриваємо поточне вікно реєстрації
                 currentWindow.Close();
             }
         }

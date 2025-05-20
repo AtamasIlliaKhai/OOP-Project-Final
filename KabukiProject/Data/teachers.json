@@ -10,7 +10,7 @@
       "Математика",
       "Фізика"
     ],
-    "Id": "407da2e8-c15a-4993-8aff-6e2f4b3eb794",
+    "Id": "22361a40-0ae2-4f5a-b663-1fa5868216e9",
     "Username": "teacher1",
     "Password": "123",
     "Role": 2
@@ -27,7 +27,7 @@
       "C#",
       "Python"
     ],
-    "Id": "1391d0df-268e-4e48-a7cd-83a4d292e8a2",
+    "Id": "ac527bc8-c28a-47d3-bf01-0123fad6e17d",
     "Username": "teacher2",
     "Password": "123",
     "Role": 2
@@ -44,7 +44,7 @@
       "Граматика",
       "Розмовна практика"
     ],
-    "Id": "5a284b29-0bbe-46d4-8e11-a0e1179961f9",
+    "Id": "0947e4d9-707b-4b01-b583-d8eab703ed19",
     "Username": "teacher3",
     "Password": "123",
     "Role": 2

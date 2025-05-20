@@ -24,7 +24,7 @@
             <PasswordBox x:Name="ConfirmPasswordBox" Margin="0 0 0 20" PasswordChanged="ConfirmPasswordBox_PasswordChanged"/>
 
             <Label Content="Я реєструюсь як:"/>
-            <ComboBox SelectedItem="{Binding SelectedRole}" Margin="0 0 0 20">
+            <ComboBox SelectedItem="{Binding SelectedRole, Mode=TwoWay}" Margin="0 0 0 20">
                 <ComboBoxItem Content="Учень"/>
                 <ComboBoxItem Content="Викладач"/>
             </ComboBox>

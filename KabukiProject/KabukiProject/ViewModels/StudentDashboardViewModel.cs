@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using KabukiProject.Views; // навігація LoginView
-using KabukiProject.Models; // User та Student
+using KabukiProject.Views; // навігація LoginView, TeacherProfileView
+using KabukiProject.Models; // User та Student, Teacher
 using KabukiProject.Services; // UserService
-using System.Collections.ObjectModel;
+using System.Collections.ObjectModel; // ObservableCollection
 
 namespace KabukiProject.ViewModels
 {
@@ -50,7 +50,9 @@ namespace KabukiProject.ViewModels
             {
                 _searchQuery = value;
                 OnPropertyChanged();
-                SearchTeachersCommand.RaiseCanExecuteChanged();
+                // Не викликаємо RaiseCanExecuteChanged, бо CanExecuteSearchTeachers завжди true
+                // Натомість, можна автоматично виконувати пошук при зміні запиту, якщо це потрібно:
+                // ExecuteSearchTeachers(null);
             }
         }
 
@@ -73,7 +75,7 @@ namespace KabukiProject.ViewModels
             {
                 _selectedTeacher = value;
                 OnPropertyChanged();
-                // Откривається вікно викладача
+                // Відкривається вікно викладача
                 if (_selectedTeacher != null)
                 {
                     OpenTeacherProfile(_selectedTeacher);
@@ -85,7 +87,9 @@ namespace KabukiProject.ViewModels
         public RelayCommand LogoutCommand { get; private set; }
         public RelayCommand SearchTeachersCommand { get; private set; }
 
-        private readonly UserService _userService;
+        // Більше не потрібне приватне поле _userService, так як ми використовуємо синглтон Instance
+        // private readonly UserService _userService; // Цей рядок видаляємо або коментуємо
+
         private Student _loggedInStudent;
 
         // Приватне поле для зберігання всіх викладачів, щоб не перешуковувати весь список кожного разу
@@ -93,7 +97,8 @@ namespace KabukiProject.ViewModels
 
         public StudentDashboardViewModel(User loggedInUser)
         {
-            _userService = new UserService();
+            // !!! ВИДАЛЯЄМО: _userService = new UserService(); !!!
+            // Тепер UserService завжди доступний через UserService.Instance
             LogoutCommand = new RelayCommand(ExecuteLogout);
             SearchTeachersCommand = new RelayCommand(ExecuteSearchTeachers, CanExecuteSearchTeachers);
 
@@ -102,104 +107,103 @@ namespace KabukiProject.ViewModels
             if (loggedInUser is Student student)
             {
                 _loggedInStudent = student;
-                LoadStudentProfile(student.Username);
+                LoadStudentProfile(student.Username); // Завантажуємо дані студента при вході
             }
             else
             {
-                MessageBox.Show("Помилка: Користувач не є учнем або дані відсутні.", "Помилка авторизації", MessageBoxButton.OK, MessageBoxImage.Error);
+                // Якщо користувач не студент або дані відсутні, перенаправляємо на вхід
+                MessageBox.Show("Помилка: Користувач не є учнем або дані відсутні. Будь ласка, увійдіть знову.", "Помилка авторизації", MessageBoxButton.OK, MessageBoxImage.Error);
                 var loginView = new LoginView();
                 loginView.Show();
                 Application.Current.MainWindow = loginView;
             }
 
-            CurrentUserBalance = 1500.00m;
-
-            // Завантажуємо всіх викладачів один раз при ініціалізації ViewModel і ЗРАЗУ виконуємо початковий пошук (щоб показати всіх)
-            _allTeachers = _userService.GetAllTeachers();
-            ExecuteSearchTeachers(null); // Виконуємо пошук при запуску, щоб відобразити всіх викладачів
+            // Завантажуємо всіх викладачів один раз при ініціалізації ViewModel
+            _allTeachers = UserService.Instance.GetAllTeachers();
+            // Виконуємо початковий пошук, щоб відобразити всіх доступних викладачів
+            ExecuteSearchTeachers(null);
         }
 
         public StudentDashboardViewModel()
         {
-            _userService = new UserService();
+            // Цей конструктор використовується для дизайнера.
+            // !!! ВИДАЛЯЄМО: _userService = new UserService(); !!!
             FoundTeachers = new ObservableCollection<Teacher>();
             SearchTeachersCommand = new RelayCommand(ExecuteSearchTeachers, CanExecuteSearchTeachers);
-
-            CurrentUserName = "Ім'я Учня (Design)";
-            CurrentUserBalance = 0.00m;
             LogoutCommand = new RelayCommand(ExecuteLogout);
 
-            // Для дизайнера тож завантажуємо всіх викладачів, щоб відобразити дані
-            _allTeachers = _userService.GetAllTeachers();
-            ExecuteSearchTeachers(null);
+            CurrentUserName = "Ім'я Учня (Design)";
+            CurrentUserBalance = 1500.00m; // Приклад балансу для дизайну
+            FirstName = "Іван (Design)";
+            LastName = "Учень (Design)";
+
+            // Для дизайнера також завантажуємо всіх викладачів, щоб відобразити дані
+            _allTeachers = UserService.Instance.GetAllTeachers();
+            ExecuteSearchTeachers(null); // Виконуємо початковий пошук для дизайну
         }
 
         // Логіка
-
         private void LoadStudentProfile(string username)
         {
-            User user = _userService.GetUserByUsername(username);
+            // Використовуємо єдиний екземпляр UserService.Instance
+            User user = UserService.Instance.GetUserByUsername(username);
             if (user is Student student)
             {
+                // Оновлюємо посилання на _loggedInStudent, якщо воно відрізняється,
+                // або просто оновлюємо його властивості
                 _loggedInStudent = student;
                 CurrentUserName = student.Username;
                 FirstName = student.FirstName;
                 LastName = student.LastName;
+                CurrentUserBalance = student.Balance; // Оновлюємо баланс з реального об'єкта студента
             }
             else
             {
-                MessageBox.Show("Не вдалося завантажити деталі профілю учня.", "Помилка завантаження", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Не вдалося завантажити деталі профілю учня. Можливо, дані пошкоджені.", "Помилка завантаження", MessageBoxButton.OK, MessageBoxImage.Error);
                 CurrentUserName = "Unknown Student";
                 FirstName = "";
                 LastName = "";
+                CurrentUserBalance = 0.00m; // Встановлюємо в 0 при помилці
             }
         }
 
         private bool CanExecuteSearchTeachers(object parameter)
         {
-            // Завжди активна
+            // Пошук завжди можливий, навіть з порожнім запитом (що покаже всіх викладачів)
             return true;
         }
-
 
         // Виконує пошук та фільтрацію репетиторів на основі SearchQuery.
         private void ExecuteSearchTeachers(object parameter)
         {
-            // Очищаємо список попередніх результатів
             FoundTeachers.Clear();
 
-            // Якщо немає завантажених викладачів, намагаємося завантажити їх (хоча вони мають бути завантажені в конструкторі, але все одно про всякий пожарний)
-            if (_allTeachers == null)
-            {
-                _allTeachers = _userService.GetAllTeachers();
-            }
-
-            // Якщо _allTeachers все ще null після спроби завантаження, значить, немає даних
+            // Якщо _allTeachers ще не завантажено (хоча має бути з конструктора), завантажуємо
             if (_allTeachers == null || !_allTeachers.Any())
             {
-                MessageBox.Show("Наразі немає доступних викладачів.", "Інформація", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
+                _allTeachers = UserService.Instance.GetAllTeachers();
+                if (_allTeachers == null || !_allTeachers.Any())
+                {
+                    MessageBox.Show("Наразі немає доступних викладачів у системі.", "Інформація", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
             }
 
-            // Застосовуємо фільтрацію, якщо SearchQuery не порожній
             IEnumerable<Teacher> filteredTeachers = _allTeachers;
 
             if (!string.IsNullOrWhiteSpace(SearchQuery))
             {
-                // Приводимо пошуковий запит до нижнього регістру для регістронезалежного пошуку
-                string lowerCaseQuery = SearchQuery.ToLower();
+                string lowerCaseQuery = SearchQuery.ToLower().Trim(); // Trim для видалення зайвих пробілів
 
-                // Фільтруємо викладачів за ім'ям, прізвищем або предметами
                 filteredTeachers = _allTeachers.Where(t =>
                     // Пошук за ім'ям або прізвищем
                     (t.FirstName != null && t.FirstName.ToLower().Contains(lowerCaseQuery)) ||
                     (t.LastName != null && t.LastName.ToLower().Contains(lowerCaseQuery)) ||
-                    // Пошук за предметами (Чек, чи є в списку предметів викладача хоча б один який містить пошуковий запит)
+                    // Пошук за предметами
                     (t.Subjects != null && t.Subjects.Any(s => s.ToLower().Contains(lowerCaseQuery)))
                 );
             }
 
-            // Додаємо відфільтрованих викладачів до ObservableCollection
             foreach (var teacher in filteredTeachers)
             {
                 FoundTeachers.Add(teacher);
@@ -214,21 +218,26 @@ namespace KabukiProject.ViewModels
 
         private void OpenTeacherProfile(Teacher teacher)
         {
-            // Створюєм новий TeacherProfileViewModel, передаючи йому обраного викладача
-            var teacherProfileViewModel = new TeacherProfileViewModel(teacher);
+            // Створюємо новий TeacherProfileViewModel, передаючи йому обраного викладача ТА поточного студента
+            // Це потрібно, якщо TeacherProfileView має функціонал, пов'язаний з діями студента (наприклад, бронювання уроку)
+            var teacherProfileViewModel = new TeacherProfileViewModel(teacher, _loggedInStudent);
 
-            // Создаєм нове вікно TeacherProfileView
             var teacherProfileView = new TeacherProfileView
             {
-                // Встановлюємо DataContext нового вікна на наш TeacherProfileViewModel
                 DataContext = teacherProfileViewModel
             };
 
-            // Показуємо вікно профілю
-            teacherProfileView.ShowDialog(); // Локаєм вікно, шоб не клацали
+            teacherProfileView.ShowDialog(); // Відкриваємо модально
 
-            // Чисто для красоти, знімаєм виділення з викладача у списку
-            SelectedTeacher = null;
+            // Після закриття TeacherProfileView, оновлюємо дані студента,
+            // оскільки його баланс міг змінитися після бронювання/оплати.
+            // Повторно завантажуємо профіль з UserService.Instance
+            if (_loggedInStudent != null)
+            {
+                LoadStudentProfile(_loggedInStudent.Username);
+            }
+
+            SelectedTeacher = null; // Знімаємо виділення з викладача у списку
         }
 
         private void ExecuteLogout(object parameter)
