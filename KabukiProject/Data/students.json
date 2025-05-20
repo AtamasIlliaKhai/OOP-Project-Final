@@ -1,0 +1,12 @@
+[
+  {
+    "FirstName": "Олексій",
+    "LastName": "Учень",
+    "Email": "student1@example.com",
+    "Balance": 500.00,
+    "Id": "160ff5fa-1794-4878-a9f3-07c06e555bde",
+    "Username": "student1",
+    "Password": "123",
+    "Role": 1
+  }
+]

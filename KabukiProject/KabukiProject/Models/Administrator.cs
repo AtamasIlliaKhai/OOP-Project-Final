@@ -10,6 +10,8 @@ namespace KabukiProject.Models
 {
     public class Administrator : User
     {
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
         public Administrator()
         {
             Role = UserRole.Administrator;

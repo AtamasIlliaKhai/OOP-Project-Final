@@ -1,0 +1,52 @@
+[
+  {
+    "FirstName": "Олена",
+    "LastName": "Іванова",
+    "Description": "Досвідчений викладач математики та фізики з 10-річним стажем.",
+    "PricePerHour": 300.00,
+    "PhotoPath": "",
+    "IsVerified": true,
+    "Subjects": [
+      "Математика",
+      "Фізика"
+    ],
+    "Id": "407da2e8-c15a-4993-8aff-6e2f4b3eb794",
+    "Username": "teacher1",
+    "Password": "123",
+    "Role": 2
+  },
+  {
+    "FirstName": "Сергій",
+    "LastName": "Петров",
+    "Description": "Викладач програмування (C#, Python) для початківців.",
+    "PricePerHour": 350.00,
+    "PhotoPath": "",
+    "IsVerified": true,
+    "Subjects": [
+      "Програмування",
+      "C#",
+      "Python"
+    ],
+    "Id": "1391d0df-268e-4e48-a7cd-83a4d292e8a2",
+    "Username": "teacher2",
+    "Password": "123",
+    "Role": 2
+  },
+  {
+    "FirstName": "Анна",
+    "LastName": "Коваленко",
+    "Description": "Викладач англійської мови для всіх рівнів. Підготовка до ЗНО/ІЕЛТС.",
+    "PricePerHour": 280.00,
+    "PhotoPath": "",
+    "IsVerified": true,
+    "Subjects": [
+      "Англійська мова",
+      "Граматика",
+      "Розмовна практика"
+    ],
+    "Id": "5a284b29-0bbe-46d4-8e11-a0e1179961f9",
+    "Username": "teacher3",
+    "Password": "123",
+    "Role": 2
+  }
+]
