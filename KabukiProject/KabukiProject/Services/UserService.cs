@@ -2,17 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Linq;
 using KabukiProject.Enums;
 using KabukiProject.Interfaces;
 using KabukiProject.Models; //User, Student, Teacher
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -27,8 +19,9 @@ namespace KabukiProject.Services
         private readonly IJsonStorageService<Teacher> _teacherStorage;
         private readonly IJsonStorageService<Administrator> _administratorStorage; // Додаємо для консистентності
 
+
         // Шляхи для json файлів
-        // Не константи, якщо ви захочете їх змінювати динамічно, але для файлів вони підійдуть
+        // Передивишся потфім, мб переробиш. Не впевнений, що воно константою має буть
         private const string StudentsFilePath = "Data/students.json";
         private const string TeachersFilePath = "Data/teachers.json";
         private const string AdministratorsFilePath = "Data/administrators.json";
@@ -104,6 +97,12 @@ namespace KabukiProject.Services
             if (administrators.Any(u => u.Username == username)) return true;
 
             return false;
+        }
+
+        public List<Teacher> GetAllTeachers()
+        {
+            // Використовуємо наш _teacherStorage для завантаження даних
+            return _teacherStorage.LoadData(TeachersFilePath);
         }
 
         /// <summary>
