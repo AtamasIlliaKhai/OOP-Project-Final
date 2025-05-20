@@ -73,7 +73,11 @@ namespace KabukiProject.ViewModels
             {
                 _selectedTeacher = value;
                 OnPropertyChanged();
-                // Тут можна ще логіку додати. Але поки шо не чіпаєм
+                // Откривається вікно викладача
+                if (_selectedTeacher != null)
+                {
+                    OpenTeacherProfile(_selectedTeacher);
+                }
             }
         }
 
@@ -208,6 +212,24 @@ namespace KabukiProject.ViewModels
             }
         }
 
+        private void OpenTeacherProfile(Teacher teacher)
+        {
+            // Створюєм новий TeacherProfileViewModel, передаючи йому обраного викладача
+            var teacherProfileViewModel = new TeacherProfileViewModel(teacher);
+
+            // Создаєм нове вікно TeacherProfileView
+            var teacherProfileView = new TeacherProfileView
+            {
+                // Встановлюємо DataContext нового вікна на наш TeacherProfileViewModel
+                DataContext = teacherProfileViewModel
+            };
+
+            // Показуємо вікно профілю
+            teacherProfileView.ShowDialog(); // Локаєм вікно, шоб не клацали
+
+            // Чисто для красоти, знімаєм виділення з викладача у списку
+            SelectedTeacher = null;
+        }
 
         private void ExecuteLogout(object parameter)
         {
