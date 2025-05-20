@@ -5,17 +5,16 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using KabukiProject.Views; //навігація LoginView
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using KabukiProject.Models; // Для доступу до моделей User та Student
-using KabukiProject.Services; // Для доступу до UserService
+using KabukiProject.Models; //User та Student
+using KabukiProject.Services; //UserService
+using System.Collections.ObjectModel;
+
 
 namespace KabukiProject.ViewModels
 {
     public class StudentDashboardViewModel : BaseViewModel
     {
+        //Властивості для відображення профілю учня та його баланса
         private string _currentUserName;
         public string CurrentUserName
         {
@@ -38,131 +37,173 @@ namespace KabukiProject.ViewModels
             }
         }
 
-        //ВЛАСТИВОСТІ ПРОФІЛЮ УЧНЯ
         private string _firstName;
         public string FirstName
         {
             get => _firstName;
-            set { _firstName = value; OnPropertyChanged(); /* Мб SaveProfileCommand.RaiseCanExecuteChanged(); */ }
+            set { _firstName = value; OnPropertyChanged(); }
         }
 
         private string _lastName;
         public string LastName
         {
             get => _lastName;
-            set { _lastName = value; OnPropertyChanged(); /* Мб SaveProfileCommand.RaiseCanExecuteChanged(); */ }
+            set { _lastName = value; OnPropertyChanged(); }
         }
 
-        /* Додати інші властивості учня пізніше
-         private string _studentSpecificProperty;
-         public string StudentSpecificProperty
-         {
-             get => _studentSpecificProperty;
-             set { _studentSpecificProperty = value; OnPropertyChanged(); }
-         }
-        */
+        //Це нове, шоб репетитора шукать
 
+        private string _searchQuery;
+        // Властивість для пошукового запиту, введеного учнем.
+
+        public string SearchQuery
+        {
+            get => _searchQuery;
+            set
+            {
+                _searchQuery = value;
+                OnPropertyChanged();
+                //Це викликає перевірку, чи можна виконати команду, воно типу локає кнопку пошуку
+                SearchTeachersCommand.RaiseCanExecuteChanged();
+            }
+        }
+
+        private ObservableCollection<Teacher> _foundTeachers;
+
+// Колекція знайдених репетиторів для відображення у списку. Юзаєм ObservableCollection для автоматичного оновлення UI.
+
+        public ObservableCollection<Teacher> FoundTeachers
+        {
+            get => _foundTeachers;
+            set
+            {
+                _foundTeachers = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private Teacher _selectedTeacher;
+
+        // Властивість для обраного репетитора зі списку (якщо потрібно буде взаємодіяти з ним).
+
+        public Teacher SelectedTeacher
+        {
+            get => _selectedTeacher;
+            set
+            {
+                _selectedTeacher = value;
+                OnPropertyChanged();
+                // Тута можна ше логіку на вибір викладача жахнуть
+            }
+        }
+
+        //Команди
         public RelayCommand LogoutCommand { get; private set; }
-        //public RelayCommand SaveProfileCommand { get; private set; } // Якщо буде функціонал збереження профілю учня
+        public RelayCommand SearchTeachersCommand { get; private set; } //Старто пошуку
 
-        private readonly UserService _userService;
-        private Student _loggedInStudent; //Зберігаємо посилання на поточного учня
+        private readonly UserService _userService; //Сервіс для взаємодії з даними студіка
+        private Student _loggedInStudent; //Ссилка на поточного студента
 
-        //КОНСТРУКТОР приймає об'єкт User (який має бути Student)
+        /* Основний конструктор StudentDashboardViewModel, що приймає автентифікованого користувача.
+        <param name="loggedInUser">Об'єкт User, який успішно пройшов аунтефікацію.</param>
+        */
         public StudentDashboardViewModel(User loggedInUser)
         {
-            _userService = new UserService();
-            LogoutCommand = new RelayCommand(ExecuteLogout);
-            //SaveProfileCommand = new RelayCommand(ExecuteSaveProfile, CanExecuteSaveProfile); // Ініціалізуємо, якщо буде
+            _userService = new UserService(); //Сервис на стол
 
-            //Перевіряємо, чи переданий користувач є учнем
+            //Команди активуємо
+            LogoutCommand = new RelayCommand(ExecuteLogout);
+            SearchTeachersCommand = new RelayCommand(ExecuteSearchTeachers, CanExecuteSearchTeachers);
+
+            //Ініціація колекції для пошуку
+            FoundTeachers = new ObservableCollection<Teacher>();
+
+            //Перевірка типу юзера та лоад його профілю
             if (loggedInUser is Student student)
             {
                 _loggedInStudent = student;
-                LoadStudentProfile(student.Username); // Завантажуємо повний профіль за ім'ям
+                LoadStudentProfile(student.Username); //Повний профіль студіка
             }
             else
             {
-                //Це не повинно статися при коректній логіці входу, але на всяк пожарний
-                MessageBox.Show("Помилка: Користувач не є учнем.", "Помилка авторизації", MessageBoxButton.OK, MessageBoxImage.Error);
-                //Можливо, перенаправити назад на логін
+                //Якщо юзер не учень, то помилку видає
+                MessageBox.Show("Помилка: Користувач не є учнем або дані відсутні.", "Помилка авторизації", MessageBoxButton.OK, MessageBoxImage.Error);
+                //Назад логін і пароль віправляєм
                 var loginView = new LoginView();
                 loginView.Show();
                 Application.Current.MainWindow = loginView;
+                // currentWindow.Close(); //Не помню. Хай буде, якщо це для прошлого бага
             }
 
-            //Приклад фіксованого балансу (буде завантажений з БД для реального учня)
+            //СТартовий баланс (може бути завантажений з даних користувача)
             CurrentUserBalance = 1500.00m;
+
+            //Ствртовий пошук, щоб показати всіх викладачів при завантаженні дашборда (або лише при пустому SearchQuery)
+            ExecuteSearchTeachers(null);
         }
 
-        /* Конструктор без параметрів (для дизайнера або якщо не передаємо User)
-         Залиште його, якщо вам потрібен дизайнер, але пам'ятайте,
-         що він не завантажуватиме реальні дані користувача.*/
+
+        //Конструктор без параметрів (в основному для Design-time DataContext у XAML, да це важно).
+
         public StudentDashboardViewModel()
         {
-            /* Цей конструктор краще використовувати лише для Design-time DataContext
-             або якщо реалізую завантаження користувача через Singleton/Dependency Injection.
-             Для реального автентифікованого користувача юзати конструктор з User. */
+            _userService = new UserService(); //Тут тоже сервіс ініцілізуєм
+            FoundTeachers = new ObservableCollection<Teacher>(); //Коллекції
+            SearchTeachersCommand = new RelayCommand(ExecuteSearchTeachers, CanExecuteSearchTeachers); //Команду
+
+            //Дані для дизайнєра:
             CurrentUserName = "Ім'я Учня (Design)";
-            CurrentUserBalance = 0.00m; // Для дизайнера
+            CurrentUserBalance = 0.00m;
             LogoutCommand = new RelayCommand(ExecuteLogout);
         }
 
+        //Тута логіка. ЗВІДСИ І ДО КОНЦА
 
-        //Методи логіки
-
+        /* Завантажує дані поточного учня з UserService.
+         <param name="username">Ім'я користувача для завантаження.</param>
+        */
         private void LoadStudentProfile(string username)
         {
-            //Завантажую повні дані учня з UserService
             User user = _userService.GetUserByUsername(username);
             if (user is Student student)
             {
+                //Повний об'єкт учня: імя фамілія "отчєства"
                 _loggedInStudent = student;
-                // Оновлюєм властивості ViewModel даними з моделі
-                CurrentUserName = student.Username; //логін
+                CurrentUserName = student.Username;
                 FirstName = student.FirstName;
                 LastName = student.LastName;
             }
             else
             {
-                //Якщо користувача не знайдено або він не учень (після аутентифікації, це помилка)
-                MessageBox.Show("Не вдалося завантажити профіль учня.", "Помилка завантаження", MessageBoxButton.OK, MessageBoxImage.Error);
-                //Можна ініціалізувати порожніми значеннями або перенаправити.
+                //Якщо юзера не знайдено, або він не студент, то оце робиться
+                MessageBox.Show("Не вдалося завантажити деталі профілю учня.", "Помилка завантаження", MessageBoxButton.OK, MessageBoxImage.Error);
                 CurrentUserName = "Unknown Student";
                 FirstName = "";
                 LastName = "";
             }
         }
 
-        /*
-        Метод для збереження профілю учня (якщо ви вирішите додати такий функціонал)
-         private bool CanExecuteSaveProfile(object parameter)
-         {
-             // Умови, за яких кнопка "Зберегти" буде активною
-             return !string.IsNullOrWhiteSpace(FirstName) &&
-                    !string.IsNullOrWhiteSpace(LastName);
-         }
+        //Метод, що узнає чи можна виконати команду SearchTeachersCommand.
+ 
+        private bool CanExecuteSearchTeachers(object parameter)
+        {
+            //Пошук можна завжди виконать і з порожнім запитом (щоб показати всіх)
+            //ІЛІ, ІЛІ return !string.IsNullOrWhiteSpace(SearchQuery); //Якщо пошук має бути лише при введенні тексту
+            return true;
+        }
 
-         private void ExecuteSaveProfile(object parameter)
-         {
-             if (_loggedInStudent != null)
-             {
-                 // Оновлюємо дані моделі учня з властивостей ViewModel
-                 _loggedInStudent.FirstName = FirstName;
-                 _loggedInStudent.LastName = LastName;
-                 // Оновіть інші властивості учня
-
-                 _userService.UpdateUser(_loggedInStudent);
-                 MessageBox.Show("Профіль учня успішно збережено!", "Успіх", MessageBoxButton.OK, MessageBoxImage.Information);
-             }
-             else
-             {
-                 MessageBox.Show("Не вдалося зберегти профіль: користувач не визначений.", "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
-             }
-         } 
+        /* Метод, що виконує логіку пошуку репетиторів. Ця частина буде реалізована на наступному кроці.
         */
+        private void ExecuteSearchTeachers(object parameter)
+        {
+            /*Пока шо просто виведемо повідомлення. Далі тут буде логіка отримання всіх прєподів з UserService і фільтрація за SearchQuery.
+            */
+            MessageBox.Show("Логіка пошуку репетиторів буде реалізована тут!", "Інформація", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
 
-        //Метод команди
+        /*метод, що виконує логіку виходу з системи
+         *<param name="parameter">Поточне вікно, яке потрібно закрити.</param>
+        */
         private void ExecuteLogout(object parameter)
         {
             if (parameter is Window currentWindow)
@@ -170,9 +211,8 @@ namespace KabukiProject.ViewModels
                 MessageBox.Show("Вихід з облікового запису учня.", "Вихід", MessageBoxButton.OK, MessageBoxImage.Information);
                 var loginView = new LoginView();
                 loginView.Show();
-                //Важливо: Оновити Application.Current.MainWindow на нове вікно
-                Application.Current.MainWindow = loginView;
-                currentWindow.Close(); //Закрити поточне вікно дашборда
+                Application.Current.MainWindow = loginView; //Оновить вікно застосунка
+                currentWindow.Close(); //закрити вікно дашборда
             }
         }
     }
