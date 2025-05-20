@@ -1,0 +1,69 @@
+﻿<Window x:Class="KabukiProject.Views.StudentDashboardView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:KabukiProject.Views"
+        xmlns:viewmodels="clr-namespace:KabukiProject.ViewModels"
+        mc:Ignorable="d"
+        Title="KabukiProject - Панель Учня" Height="600" Width="900">
+    <Window.DataContext>
+        <viewmodels:StudentDashboardViewModel/>
+    </Window.DataContext>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10">
+            <TextBlock Text="{Binding CurrentUserName}" VerticalAlignment="Center" Margin="0 0 10 0"/>
+            <Button Content="Вийти" Command="{Binding LogoutCommand}"
+                    CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}"/>
+        </StackPanel>
+
+        <TabControl Grid.Row="1" Margin="10">
+            <TabItem Header="Пошук репетиторів">
+                <StackPanel Margin="10">
+                    <TextBlock Text="У1: Пошук репетиторів" FontWeight="Bold"/>
+                    <TextBlock Text="Фільтрація за предметом, ціною, рейтингом." TextWrapping="Wrap" Margin="0 5 0 10"/>
+                    <Grid Margin="0 10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Label Content="Предмет:"/>
+                        <TextBox Grid.Column="1" Margin="0 0 10 0"/>
+                        <Button Content="Пошук" Grid.Column="2"/>
+                    </Grid>
+                    <ListBox Height="200" BorderBrush="LightGray" BorderThickness="1"/>
+                    <TextBlock Text="Список репетиторів з результатів пошуку"/>
+                </StackPanel>
+            </TabItem>
+            <TabItem Header="Мої уроки">
+                <StackPanel Margin="10">
+                    <TextBlock Text="У2: Запис на урок / Перегляд уроків" FontWeight="Bold"/>
+                    <TextBlock Text="Обрання дати/часу з календаря репетитора." TextWrapping="Wrap" Margin="0 5 0 10"/>
+                    <ListBox Height="200" BorderBrush="LightGray" BorderThickness="1"/>
+                    <TextBlock Text="Список моїх запланованих та завершених уроків"/>
+                </StackPanel>
+            </TabItem>
+            <TabItem Header="Оплата">
+                <StackPanel Margin="10">
+                    <TextBlock Text="У3: Оплата уроків" FontWeight="Bold"/>
+                    <TextBlock Text="PayPal, кредитні/дебітові картки." TextWrapping="Wrap" Margin="0 5 0 10"/>
+                    <TextBlock Text="Баланс: {Binding CurrentUserBalance, StringFormat=C}" Margin="0 10"/>
+                    <Button Content="Поповнити баланс" Margin="0 10"/>
+                </StackPanel>
+            </TabItem>
+            <TabItem Header="Відгуки">
+                <StackPanel Margin="10">
+                    <TextBlock Text="У4: Залишення відгуків" FontWeight="Bold"/>
+                    <TextBlock Text="Після завершення уроку." TextWrapping="Wrap" Margin="0 5 0 10"/>
+                    <TextBlock Text="Список моїх відгуків / Форма для нового відгуку"/>
+                </StackPanel>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</Window>

@@ -1,0 +1,73 @@
+﻿<Window x:Class="KabukiProject.Views.TeacherDashboardView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:KabukiProject.Views"
+        xmlns:viewmodels="clr-namespace:KabukiProject.ViewModels"
+        mc:Ignorable="d"
+        Title="KabukiProject - Панель Викладача" Height="600" Width="900">
+    <Window.DataContext>
+        <viewmodels:TeacherDashboardViewModel/>
+    </Window.DataContext>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10">
+            <TextBlock Text="{Binding CurrentUserName}" VerticalAlignment="Center" Margin="0 0 10 0"/>
+            <Button Content="Вийти" Command="{Binding LogoutCommand}"
+                    CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}"/>
+        </StackPanel>
+
+        <TabControl Grid.Row="1" Margin="10">
+            <TabItem Header="Мій профіль">
+                <StackPanel Margin="10">
+                    <TextBlock Text="В1: Заповнення профілю" FontWeight="Bold"/>
+                    <TextBlock Text="Додавання фото, опису, ціни, розкладу (тут тільки загальна інформація)." TextWrapping="Wrap" Margin="0 5 0 10"/>
+                    <Label Content="Ім'я:"/>
+                    <TextBox Margin="0 0 0 10"/>
+                    <Label Content="Прізвище:"/>
+                    <TextBox Margin="0 0 0 10"/>
+                    <Label Content="Опис:"/>
+                    <TextBox Height="80" TextWrapping="Wrap" AcceptsReturn="True" Margin="0 0 0 10"/>
+                    <Label Content="Ціна за годину:"/>
+                    <TextBox Margin="0 0 0 10"/>
+                    <Button Content="Зберегти профіль" Margin="0 10"/>
+                </StackPanel>
+            </TabItem>
+            <TabItem Header="Мій розклад">
+                <StackPanel Margin="10">
+                    <TextBlock Text="В2: Керування розкладом" FontWeight="Bold"/>
+                    <TextBlock Text="Вказівка доступних дат/часу." TextWrapping="Wrap" Margin="0 5 0 10"/>
+                    <TextBlock Text="Календар з доступними слотами / Додати новий слот"/>
+                </StackPanel>
+            </TabItem>
+            <TabItem Header="Мої уроки">
+                <StackPanel Margin="10">
+                    <TextBlock Text="В3: Перегляд запланованих уроків" FontWeight="Bold"/>
+                    <TextBlock Text="Інтеграція з календарем." TextWrapping="Wrap" Margin="0 5 0 10"/>
+                    <ListBox Height="200" BorderBrush="LightGray" BorderThickness="1"/>
+                    <TextBlock Text="Список запланованих та завершених уроків"/>
+                </StackPanel>
+            </TabItem>
+            <TabItem Header="Фінанси">
+                <StackPanel Margin="10">
+                    <TextBlock Text="В4: Отримання оплати" FontWeight="Bold"/>
+                    <TextBlock Text="Виведення коштів на банківську картку." TextWrapping="Wrap" Margin="0 5 0 10"/>
+                    <TextBlock Text="Баланс: {Binding CurrentUserBalance, StringFormat=C}" Margin="0 10"/>
+                    <Button Content="Вивести кошти" Margin="0 10"/>
+                </StackPanel>
+            </TabItem>
+            <TabItem Header="Відгуки">
+                <StackPanel Margin="10">
+                    <TextBlock Text="В5: Відповідь на відгуки" FontWeight="Bold"/>
+                    <TextBlock Text="Публічний коментар до відгуку учня." TextWrapping="Wrap" Margin="0 5 0 10"/>
+                    <TextBlock Text="Список відгуків про мене / Форма для відповіді"/>
+                </StackPanel>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</Window>

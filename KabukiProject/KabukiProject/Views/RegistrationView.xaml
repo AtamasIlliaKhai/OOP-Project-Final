@@ -1,0 +1,39 @@
+﻿<Window x:Class="KabukiProject.Views.RegistrationView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:KabukiProject.Views"
+        xmlns:viewmodels="clr-namespace:KabukiProject.ViewModels"
+        mc:Ignorable="d"
+        Title="KabukiProject - Реєстрація" Height="500" Width="400">
+    <Window.DataContext>
+        <viewmodels:RegistrationViewModel/>
+    </Window.DataContext>
+    <Grid>
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="300">
+            <TextBlock Text="Створити новий обліковий запис" HorizontalAlignment="Center" FontSize="18" Margin="0 0 0 20"/>
+
+            <Label Content="Ім'я користувача:"/>
+            <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" Margin="0 0 0 10"/>
+
+            <Label Content="Пароль:"/>
+            <PasswordBox x:Name="PasswordBox" Margin="0 0 0 10" PasswordChanged="PasswordBox_PasswordChanged"/>
+
+            <Label Content="Підтвердіть пароль:"/>
+            <PasswordBox x:Name="ConfirmPasswordBox" Margin="0 0 0 20" PasswordChanged="ConfirmPasswordBox_PasswordChanged"/>
+
+            <Label Content="Я реєструюсь як:"/>
+            <ComboBox SelectedItem="{Binding SelectedRole}" Margin="0 0 0 20">
+                <ComboBoxItem Content="Учень"/>
+                <ComboBoxItem Content="Викладач"/>
+            </ComboBox>
+
+            <Button Content="Зареєструватися" Command="{Binding RegisterCommand}"
+                    CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}"
+                    Margin="0 0 0 10"/>
+            <Button Content="Повернутися до входу" Command="{Binding NavigateToLoginCommand}"
+                    CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}"/>
+        </StackPanel>
+    </Grid>
+</Window>
