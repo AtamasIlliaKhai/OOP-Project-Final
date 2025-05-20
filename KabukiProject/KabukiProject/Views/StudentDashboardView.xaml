@@ -20,24 +20,96 @@
         </StackPanel>
 
         <TabControl Grid.Row="1" Margin="10">
+
             <TabItem Header="Пошук репетиторів">
                 <StackPanel Margin="10">
-                    <TextBlock Text="У1: Пошук репетиторів" FontWeight="Bold"/>
-                    <TextBlock Text="Фільтрація за предметом, ціною, рейтингом." TextWrapping="Wrap" Margin="0 5 0 10"/>
-                    <Grid Margin="0 10">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <Label Content="Предмет:"/>
-                        <TextBox Grid.Column="1" Margin="0 0 10 0"/>
-                        <Button Content="Пошук" Grid.Column="2"/>
-                    </Grid>
-                    <ListBox Height="200" BorderBrush="LightGray" BorderThickness="1"/>
-                    <TextBlock Text="Список репетиторів з результатів пошуку"/>
+                    <TextBlock Text="У1: Пошук репетиторів" FontWeight="Bold" Margin="0 0 0 5"/>
+                    <TextBlock Text="Знайдіть ідеального викладача для ваших потреб." TextWrapping="Wrap" Margin="0 0 0 10"/>
+
+                    <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
+                        <TextBox Width="200"
+                                 Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                                 VerticalContentAlignment="Center"
+                                 Margin="0 0 10 0">
+                            <TextBox.Template>
+                                <ControlTemplate TargetType="TextBox">
+                                    <Grid>
+                                        <Border Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                CornerRadius="3"/>
+                                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"
+                                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                                        <TextBlock IsHitTestVisible="False"
+                                                   Text="Введіть ім'я або предмет..."
+                                                   VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                   Margin="{TemplateBinding Padding}"
+                                                   Foreground="Gray"
+                                                   FontStyle="Italic">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Text, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type TextBox}}}" Value="">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+                                </ControlTemplate>
+                            </TextBox.Template>
+                        </TextBox>
+
+                        <Button Content="Знайти репетиторів"
+                                Command="{Binding SearchTeachersCommand}"/>
+                    </StackPanel>
+
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="400">
+                        <ListBox ItemsSource="{Binding FoundTeachers}"
+                                 SelectedItem="{Binding SelectedTeacher}"
+                                 SelectionMode="Single"
+                                 HorizontalContentAlignment="Stretch">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="5" Padding="10" Margin="0 5">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding FirstName}" FontWeight="Bold" FontSize="16"/>
+                                                <TextBlock Text="{Binding LastName}" FontWeight="Bold" FontSize="16" Margin="5 0 0 0"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Margin="0 5 0 5" Foreground="Gray"/>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="Ціна за годину: "/>
+                                                <TextBlock Text="{Binding PricePerHour, StringFormat={}{0:C}}" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="Предмети: "/>
+                                                <ItemsControl ItemsSource="{Binding Subjects}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding}" Margin="0 0 5 0" FontStyle="Italic"/>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal"/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </ScrollViewer>
                 </StackPanel>
             </TabItem>
+
             <TabItem Header="Мої уроки">
                 <StackPanel Margin="10">
                     <TextBlock Text="У2: Запис на урок / Перегляд уроків" FontWeight="Bold"/>
@@ -46,6 +118,7 @@
                     <TextBlock Text="Список моїх запланованих та завершених уроків"/>
                 </StackPanel>
             </TabItem>
+
             <TabItem Header="Оплата">
                 <StackPanel Margin="10">
                     <TextBlock Text="У3: Оплата уроків" FontWeight="Bold"/>
@@ -54,6 +127,7 @@
                     <Button Content="Поповнити баланс" Margin="0 10"/>
                 </StackPanel>
             </TabItem>
+
             <TabItem Header="Відгуки">
                 <StackPanel Margin="10">
                     <TextBlock Text="У4: Залишення відгуків" FontWeight="Bold"/>
