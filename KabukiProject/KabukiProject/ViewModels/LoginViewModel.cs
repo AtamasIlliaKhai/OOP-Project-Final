@@ -58,7 +58,6 @@ namespace KabukiProject.ViewModels
         //Передача вікна ЯК ПАРАМЕТРА
         private void ExecuteLogin(object parameter)
         {
-            //ПЕРЕВІРИТИ чи передано вікно
             if (parameter is Window currentWindow)
             {
                 User authenticatedUser = _userService.AuthenticateUser(Username, Password);
@@ -70,15 +69,19 @@ namespace KabukiProject.ViewModels
                     Window nextWindow = null;
                     if (authenticatedUser.Role == UserRole.Student)
                     {
-                        nextWindow = new StudentDashboardView();
+                        // ПЕРЕДАЄМО ОБ'ЄКТ AUTHENTICATEDUSER ДО VIEWS/VIEWMODELS
+                        nextWindow = new StudentDashboardView(authenticatedUser);
                     }
                     else if (authenticatedUser.Role == UserRole.Teacher)
                     {
-                        nextWindow = new TeacherDashboardView();
+                        // ПЕРЕДАЄМО ОБ'ЄКТ AUTHENTICATEDUSER ДО VIEWS/VIEWMODELS
+                        nextWindow = new TeacherDashboardView(authenticatedUser);
                     }
                     else if (authenticatedUser.Role == UserRole.Administrator)
                     {
                         //TODO: Створити AdminDashboardView пізніше
+                        // Якщо AdminDashboardView також матиме конструктор з User:
+                        // nextWindow = new AdminDashboardView(authenticatedUser);
                         MessageBox.Show("Адміністраторська панель ще не реалізована.", "Інформація", MessageBoxButton.OK, MessageBoxImage.Information);
                         return; //Залишимося на поточному вікні, доки не буде адмін-панелі
                     }
@@ -86,9 +89,8 @@ namespace KabukiProject.ViewModels
                     if (nextWindow != null)
                     {
                         nextWindow.Show();
-                        //Важливо: Оновити Application.Current.MainWindow на нове вікно
                         Application.Current.MainWindow = nextWindow;
-                        currentWindow.Close(); //Закрити старе вікно
+                        currentWindow.Close();
                     }
                 }
                 else

@@ -8,51 +8,59 @@ using System.Linq;
 using KabukiProject.Enums;
 using KabukiProject.Interfaces;
 using KabukiProject.Models; //User, Student, Teacher
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows;
+
 
 namespace KabukiProject.Services
 {
     public class UserService
     {
-        private readonly IJsonStorageService<User> _userStorage;
+        // Не використовуємо IJsonStorageService<User> для окремих ролей, бо дані розділені
         private readonly IJsonStorageService<Student> _studentStorage;
         private readonly IJsonStorageService<Teacher> _teacherStorage;
+        private readonly IJsonStorageService<Administrator> _administratorStorage; // Додаємо для консистентності
 
-        //Шляхи для json ів
-        private const string UsersFilePath = "Data/users.json"; //Типу якщо на все один
+        // Шляхи для json файлів
+        // Не константи, якщо ви захочете їх змінювати динамічно, але для файлів вони підійдуть
         private const string StudentsFilePath = "Data/students.json";
         private const string TeachersFilePath = "Data/teachers.json";
         private const string AdministratorsFilePath = "Data/administrators.json";
 
         public UserService()
         {
-            //Різні місця збереження для безпеки
-            _userStorage = new JsonStorageService<User>(); //Для юзерів в одному файлі
+            // Різні місця збереження для безпеки
             _studentStorage = new JsonStorageService<Student>();
             _teacherStorage = new JsonStorageService<Teacher>();
-            //Для адмінів:
-            // _adminStorage = new JsonStorageService<Administrator>();
+            _administratorStorage = new JsonStorageService<Administrator>(); // Ініціалізуємо
         }
 
         public User AuthenticateUser(string username, string password)
         {
-            //Завантажити всіх юзерів з їх відповідних файлів
+            // Завантажити всіх юзерів з їх відповідних файлів, передаючи filePath
             List<Student> students = _studentStorage.LoadData(StudentsFilePath);
             List<Teacher> teachers = _teacherStorage.LoadData(TeachersFilePath);
-            List<Administrator> administrators = new JsonStorageService<Administrator>().LoadData(AdministratorsFilePath); //Типу окремий файл
+            List<Administrator> administrators = _administratorStorage.LoadData(AdministratorsFilePath);
 
-            //Чекнути студентів
+            // Чекнути студентів
             User user = students.FirstOrDefault(u => u.Username == username && u.Password == password);
             if (user != null) return user;
 
-            //Чекнути викладачів
+            // Чекнути викладачів
             user = teachers.FirstOrDefault(u => u.Username == username && u.Password == password);
             if (user != null) return user;
 
-            //Чекнути адмінів
+            // Чекнути адмінів
             user = administrators.FirstOrDefault(u => u.Username == username && u.Password == password);
             if (user != null) return user;
 
-            return null; //Користувач не знайдений
+            return null; // Користувач не знайдений
         }
 
         public bool RegisterUser(User newUser)
@@ -66,37 +74,114 @@ namespace KabukiProject.Services
             {
                 List<Student> students = _studentStorage.LoadData(StudentsFilePath);
                 students.Add(newUser as Student);
-                _studentStorage.SaveData(students, StudentsFilePath);
+                _studentStorage.SaveData(students, StudentsFilePath); // Передаємо filePath
             }
             else if (newUser.Role == UserRole.Teacher)
             {
                 List<Teacher> teachers = _teacherStorage.LoadData(TeachersFilePath);
                 teachers.Add(newUser as Teacher);
-                _teacherStorage.SaveData(teachers, TeachersFilePath);
+                _teacherStorage.SaveData(teachers, TeachersFilePath); // Передаємо filePath
             }
             else if (newUser.Role == UserRole.Administrator)
             {
-                //Краще це в адмінів засунути
-                List<Administrator> admins = new JsonStorageService<Administrator>().LoadData(AdministratorsFilePath);
+                List<Administrator> admins = _administratorStorage.LoadData(AdministratorsFilePath);
                 admins.Add(newUser as Administrator);
-                new JsonStorageService<Administrator>().SaveData(admins, AdministratorsFilePath);
+                _administratorStorage.SaveData(admins, AdministratorsFilePath); // Передаємо filePath
             }
             return true;
         }
 
         public bool IsUsernameTaken(string username)
         {
-            //Перевірити у всіх типах
+            // Check in all user types
             List<Student> students = _studentStorage.LoadData(StudentsFilePath);
             if (students.Any(u => u.Username == username)) return true;
 
             List<Teacher> teachers = _teacherStorage.LoadData(TeachersFilePath);
             if (teachers.Any(u => u.Username == username)) return true;
 
-            List<Administrator> administrators = new JsonStorageService<Administrator>().LoadData(AdministratorsFilePath);
+            List<Administrator> administrators = _administratorStorage.LoadData(AdministratorsFilePath);
             if (administrators.Any(u => u.Username == username)) return true;
 
             return false;
+        }
+
+        /// <summary>
+        /// Повертає об'єкт користувача (Student, Teacher або Administrator) за його ім'ям користувача.
+        /// </summary>
+        /// <param name="username">Ім'я користувача для пошуку.</param>
+        /// <returns>Об'єкт User або null, якщо користувач не знайдений.</returns>
+        public User GetUserByUsername(string username)
+        {
+            // Шукаємо серед студентів
+            List<Student> students = _studentStorage.LoadData(StudentsFilePath);
+            Student student = students.FirstOrDefault(s => s.Username == username);
+            if (student != null) return student;
+
+            // Шукаємо серед викладачів
+            List<Teacher> teachers = _teacherStorage.LoadData(TeachersFilePath);
+            Teacher teacher = teachers.FirstOrDefault(t => t.Username == username);
+            if (teacher != null) return teacher;
+
+            // Шукаємо серед адміністраторів
+            List<Administrator> administrators = _administratorStorage.LoadData(AdministratorsFilePath);
+            Administrator administrator = administrators.FirstOrDefault(a => a.Username == username);
+            if (administrator != null) return administrator;
+
+            return null; // Користувач не знайдений
+        }
+
+        /// <summary>
+        /// Оновлює дані існуючого користувача та зберігає їх у відповідному файлі.
+        /// </summary>
+        /// <param name="updatedUser">Об'єкт користувача з оновленими даними.</param>
+        public void UpdateUser(User updatedUser)
+        {
+            if (updatedUser == null) return;
+
+            if (updatedUser.Role == UserRole.Student)
+            {
+                List<Student> students = _studentStorage.LoadData(StudentsFilePath);
+                var existingStudent = students.FirstOrDefault(s => s.Username == updatedUser.Username);
+                if (existingStudent != null && updatedUser is Student newStudentData)
+                {
+                    // Оновлюємо властивості студента
+                    existingStudent.Password = newStudentData.Password; // Якщо потрібно оновити пароль
+                    // Додайте інші специфічні для студента властивості, які потрібно оновити
+                }
+                _studentStorage.SaveData(students, StudentsFilePath); // Передаємо filePath
+            }
+            else if (updatedUser.Role == UserRole.Teacher)
+            {
+                List<Teacher> teachers = _teacherStorage.LoadData(TeachersFilePath);
+                var existingTeacher = teachers.FirstOrDefault(t => t.Username == updatedUser.Username);
+                if (existingTeacher != null && updatedUser is Teacher newTeacherData)
+                {
+                    // Оновлюємо властивості викладача
+                    existingTeacher.Password = newTeacherData.Password; // Якщо потрібно оновити пароль
+                    existingTeacher.FirstName = newTeacherData.FirstName;
+                    existingTeacher.LastName = newTeacherData.LastName;
+                    existingTeacher.Description = newTeacherData.Description;
+                    existingTeacher.PricePerHour = newTeacherData.PricePerHour; // Виправлено на PricePerHour
+                    existingTeacher.PhotoPath = newTeacherData.PhotoPath;
+                    existingTeacher.IsVerified = newTeacherData.IsVerified;
+                    existingTeacher.Subjects = newTeacherData.Subjects;
+                    // Додайте інші специфічні для викладача властивості, які потрібно оновити
+                }
+                _teacherStorage.SaveData(teachers, TeachersFilePath); // Передаємо filePath
+            }
+            else if (updatedUser.Role == UserRole.Administrator)
+            {
+                List<Administrator> administrators = _administratorStorage.LoadData(AdministratorsFilePath);
+                var existingAdmin = administrators.FirstOrDefault(a => a.Username == updatedUser.Username);
+                if (existingAdmin != null && updatedUser is Administrator newAdminData)
+                {
+                    // Оновлюємо властивості адміністратора
+                    existingAdmin.Password = newAdminData.Password; // Якщо потрібно оновити пароль
+                    // Додайте інші специфічні для адміністратора властивості, які потрібно оновити
+                }
+                _administratorStorage.SaveData(administrators, AdministratorsFilePath); // Передаємо filePath
+            }
         }
     }
 }

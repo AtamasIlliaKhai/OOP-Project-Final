@@ -1,4 +1,6 @@
-﻿using System;
+﻿using KabukiProject.Models;
+using KabukiProject.ViewModels;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -22,6 +24,12 @@ namespace KabukiProject.Views
         public StudentDashboardView()
         {
             InitializeComponent();
+        }
+
+        public StudentDashboardView(User loggedInUser)
+        {
+            InitializeComponent();
+            this.DataContext = new StudentDashboardViewModel(loggedInUser);
         }
     }
 }

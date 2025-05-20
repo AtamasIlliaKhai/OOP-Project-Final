@@ -7,9 +7,6 @@
         xmlns:viewmodels="clr-namespace:KabukiProject.ViewModels"
         mc:Ignorable="d"
         Title="KabukiProject - Панель Учня" Height="600" Width="900">
-    <Window.DataContext>
-        <viewmodels:StudentDashboardViewModel/>
-    </Window.DataContext>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
