@@ -4,25 +4,30 @@ using System.Linq;
 using System.Text;
 using KabukiProject.Enums;
 using KabukiProject.Interfaces;
-using KabukiProject.Models; // User, Student, Teacher
-using System.Linq;
-using System.Threading.Tasks;
+using KabukiProject.Models;
+using System.IO;
 using System.Windows;
-using System.IO; // Додано для Path.Combine та Directory
-
 
 namespace KabukiProject.Services
 {
     public class UserService
     {
+        public void SaveAllData()
+        {
+            _studentStorage.SaveData(_students, StudentsFilePath);
+            _teacherStorage.SaveData(_teachers, TeachersFilePath);
+            _administratorStorage.SaveData(_administrators, AdministratorsFilePath);
+        }
+
         private readonly IJsonStorageService<Student> _studentStorage;
         private readonly IJsonStorageService<Teacher> _teacherStorage;
         private readonly IJsonStorageService<Administrator> _administratorStorage;
 
-        // Шляхи для JSON файлів
-        // Забезпечуємо, що шлях відносний до папки, де виконується EXE-файл.
-        // const string - це добре, оскільки ці значення не змінюються.
-        private const string DataDirectory = "Data"; // Нова константа для папки
+        private List<Student> _students;
+        private List<Teacher> _teachers;
+        private List<Administrator> _administrators;
+
+        private const string DataDirectory = "Data";
         private const string StudentsFileName = "students.json";
         private const string TeachersFileName = "teachers.json";
         private const string AdministratorsFileName = "administrators.json";
@@ -31,35 +36,32 @@ namespace KabukiProject.Services
         private string TeachersFilePath => Path.Combine(DataDirectory, TeachersFileName);
         private string AdministratorsFilePath => Path.Combine(DataDirectory, AdministratorsFileName);
 
-
         public UserService()
         {
             _studentStorage = new JsonStorageService<Student>();
             _teacherStorage = new JsonStorageService<Teacher>();
             _administratorStorage = new JsonStorageService<Administrator>();
 
-            // Цей блок додає фіктивних користувачів лише при першому запуску,
-            // якщо файли даних порожні. Видаліть його після тестування,
-            // або коли ви будете мати реальні дані.
+            // Завантажуємо дані при ініціалізації сервісу
+            _students = _studentStorage.LoadData(StudentsFilePath);
+            _teachers = _teacherStorage.LoadData(TeachersFilePath);
+            _administrators = _administratorStorage.LoadData(AdministratorsFilePath);
+
             InitializeDummyDataIfEmpty();
         }
 
-        // Новий метод для початкової ініціалізації даних
         private void InitializeDummyDataIfEmpty()
         {
-            List<Student> students = _studentStorage.LoadData(StudentsFilePath);
-            List<Teacher> teachers = _teacherStorage.LoadData(TeachersFilePath);
-            List<Administrator> administrators = _administratorStorage.LoadData(AdministratorsFilePath);
-
             bool needsSave = false;
 
             // Додаємо фіктивного учня, якщо немає жодного
-            if (!students.Any())
+            if (!_students.Any())
             {
-                students.Add(new Student
+                _students.Add(new Student
                 {
+                    Id = Guid.NewGuid().ToString(),
                     Username = "student1",
-                    Password = "123", // Паролі повинні бути хешовані в реальному застосунку
+                    Password = "123",
                     FirstName = "Олексій",
                     LastName = "Учень",
                     Email = "student1@example.com",
@@ -69,10 +71,11 @@ namespace KabukiProject.Services
             }
 
             // Додаємо фіктивних викладачів, якщо немає жодного
-            if (!teachers.Any())
+            if (!_teachers.Any())
             {
-                teachers.Add(new Teacher
+                _teachers.Add(new Teacher
                 {
+                    Id = Guid.NewGuid().ToString(),
                     Username = "teacher1",
                     Password = "123",
                     FirstName = "Олена",
@@ -80,11 +83,12 @@ namespace KabukiProject.Services
                     Description = "Досвідчений викладач математики та фізики з 10-річним стажем.",
                     PricePerHour = 300.00m,
                     Subjects = new List<string> { "Математика", "Фізика" },
-                    PhotoPath = "", // Шлях до фото, якщо воно буде
+                    PhotoPath = "",
                     IsVerified = true
                 });
-                teachers.Add(new Teacher
+                _teachers.Add(new Teacher
                 {
+                    Id = Guid.NewGuid().ToString(),
                     Username = "teacher2",
                     Password = "123",
                     FirstName = "Сергій",
@@ -95,8 +99,9 @@ namespace KabukiProject.Services
                     PhotoPath = "",
                     IsVerified = true
                 });
-                teachers.Add(new Teacher
+                _teachers.Add(new Teacher
                 {
+                    Id = Guid.NewGuid().ToString(),
                     Username = "teacher3",
                     Password = "123",
                     FirstName = "Анна",
@@ -111,10 +116,11 @@ namespace KabukiProject.Services
             }
 
             // Додаємо фіктивного адміністратора, якщо немає жодного
-            if (!administrators.Any())
+            if (!_administrators.Any())
             {
-                administrators.Add(new Administrator
+                _administrators.Add(new Administrator
                 {
+                    Id = Guid.NewGuid().ToString(),
                     Username = "admin1",
                     Password = "123",
                     FirstName = "Головний",
@@ -126,29 +132,21 @@ namespace KabukiProject.Services
             // Зберігаємо дані, якщо були додані нові користувачі
             if (needsSave)
             {
-                _studentStorage.SaveData(students, StudentsFilePath);
-                _teacherStorage.SaveData(teachers, TeachersFilePath);
-                _administratorStorage.SaveData(administrators, AdministratorsFilePath);
+                _studentStorage.SaveData(_students, StudentsFilePath);
+                _teacherStorage.SaveData(_teachers, TeachersFilePath);
+                _administratorStorage.SaveData(_administrators, AdministratorsFilePath);
             }
         }
 
-
         public User AuthenticateUser(string username, string password)
         {
-            // Завантажуємо дані щоразу, щоб працювати з актуальними файлами.
-            // Хоча для кожного запиту це може бути неефективно на великих даних,
-            // для JSON файлів це прийнятно.
-            List<Student> students = _studentStorage.LoadData(StudentsFilePath);
-            List<Teacher> teachers = _teacherStorage.LoadData(TeachersFilePath);
-            List<Administrator> administrators = _administratorStorage.LoadData(AdministratorsFilePath);
-
-            User user = students.FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase) && u.Password == password);
+            User user = _students.FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase) && u.Password == password);
             if (user != null) return user;
 
-            user = teachers.FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase) && u.Password == password);
+            user = _teachers.FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase) && u.Password == password);
             if (user != null) return user;
 
-            user = administrators.FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase) && u.Password == password);
+            user = _administrators.FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase) && u.Password == password);
             if (user != null) return user;
 
             return null;
@@ -162,63 +160,78 @@ namespace KabukiProject.Services
                 return false;
             }
 
+            // Встановлюємо ID для нового користувача, якщо його ще немає
+            if (string.IsNullOrEmpty(newUser.Id))
+            {
+                newUser.Id = Guid.NewGuid().ToString();
+            }
+
             if (newUser.Role == UserRole.Student)
             {
-                List<Student> students = _studentStorage.LoadData(StudentsFilePath);
-                students.Add(newUser as Student);
-                _studentStorage.SaveData(students, StudentsFilePath);
+                if (newUser is Student studentToAdd)
+                {
+                    _students.Add(studentToAdd);
+                    _studentStorage.SaveData(_students, StudentsFilePath);
+                }
+                else
+                {
+                    MessageBox.Show("Помилка: не вдалося зареєструвати студента. Неправильний тип об'єкта.", "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return false;
+                }
             }
             else if (newUser.Role == UserRole.Teacher)
             {
-                List<Teacher> teachers = _teacherStorage.LoadData(TeachersFilePath);
-                teachers.Add(newUser as Teacher);
-                _teacherStorage.SaveData(teachers, TeachersFilePath);
+                if (newUser is Teacher teacherToAdd)
+                {
+                    _teachers.Add(teacherToAdd);
+                    _teacherStorage.SaveData(_teachers, TeachersFilePath);
+                }
+                else
+                {
+                    MessageBox.Show("Помилка: не вдалося зареєструвати викладача. Неправильний тип об'єкта.", "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return false;
+                }
             }
             else if (newUser.Role == UserRole.Administrator)
             {
-                List<Administrator> admins = _administratorStorage.LoadData(AdministratorsFilePath);
-                admins.Add(newUser as Administrator);
-                _administratorStorage.SaveData(admins, AdministratorsFilePath);
+                if (newUser is Administrator adminToAdd)
+                {
+                    _administrators.Add(adminToAdd);
+                    _administratorStorage.SaveData(_administrators, AdministratorsFilePath);
+                }
+                else
+                {
+                    MessageBox.Show("Помилка: не вдалося зареєструвати адміністратора. Неправильний тип об'єкта.", "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return false;
+                }
             }
             return true;
         }
 
         public bool IsUsernameTaken(string username)
         {
-            // Перевіряємо в усіх типах користувачів
-            List<Student> students = _studentStorage.LoadData(StudentsFilePath);
-            if (students.Any(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase))) return true;
-
-            List<Teacher> teachers = _teacherStorage.LoadData(TeachersFilePath);
-            if (teachers.Any(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase))) return true;
-
-            List<Administrator> administrators = _administratorStorage.LoadData(AdministratorsFilePath);
-            if (administrators.Any(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase))) return true;
+            if (_students.Any(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase))) return true;
+            if (_teachers.Any(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase))) return true;
+            if (_administrators.Any(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase))) return true;
 
             return false;
         }
 
         public List<Teacher> GetAllTeachers()
         {
-            return _teacherStorage.LoadData(TeachersFilePath);
+            return _teachers;
         }
 
         public User GetUserByUsername(string username)
         {
-            // Шукаємо серед студентів
-            List<Student> students = _studentStorage.LoadData(StudentsFilePath);
-            Student student = students.FirstOrDefault(s => s.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
-            if (student != null) return student;
+            User user = _students.FirstOrDefault(s => s.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+            if (user != null) return user;
 
-            // Шукаємо серед викладачів
-            List<Teacher> teachers = _teacherStorage.LoadData(TeachersFilePath);
-            Teacher teacher = teachers.FirstOrDefault(t => t.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
-            if (teacher != null) return teacher;
+            user = _teachers.FirstOrDefault(t => t.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+            if (user != null) return user;
 
-            // Шукаємо серед адміністраторів
-            List<Administrator> administrators = _administratorStorage.LoadData(AdministratorsFilePath);
-            Administrator administrator = administrators.FirstOrDefault(a => a.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
-            if (administrator != null) return administrator;
+            user = _administrators.FirstOrDefault(a => a.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+            if (user != null) return user;
 
             return null;
         }
@@ -229,26 +242,22 @@ namespace KabukiProject.Services
 
             if (updatedUser.Role == UserRole.Student)
             {
-                List<Student> students = _studentStorage.LoadData(StudentsFilePath);
-                var existingStudent = students.FirstOrDefault(s => s.Username == updatedUser.Username);
+                var existingStudent = _students.FirstOrDefault(s => s.Username == updatedUser.Username);
                 if (existingStudent != null && updatedUser is Student newStudentData)
                 {
-                    // Оновлюємо всі властивості студента
                     existingStudent.Password = newStudentData.Password;
                     existingStudent.FirstName = newStudentData.FirstName;
                     existingStudent.LastName = newStudentData.LastName;
                     existingStudent.Email = newStudentData.Email;
                     existingStudent.Balance = newStudentData.Balance;
                 }
-                _studentStorage.SaveData(students, StudentsFilePath);
+                _studentStorage.SaveData(_students, StudentsFilePath);
             }
             else if (updatedUser.Role == UserRole.Teacher)
             {
-                List<Teacher> teachers = _teacherStorage.LoadData(TeachersFilePath);
-                var existingTeacher = teachers.FirstOrDefault(t => t.Username == updatedUser.Username);
+                var existingTeacher = _teachers.FirstOrDefault(t => t.Username == updatedUser.Username);
                 if (existingTeacher != null && updatedUser is Teacher newTeacherData)
                 {
-                    // Оновлюємо всі властивості викладача
                     existingTeacher.Password = newTeacherData.Password;
                     existingTeacher.FirstName = newTeacherData.FirstName;
                     existingTeacher.LastName = newTeacherData.LastName;
@@ -258,20 +267,18 @@ namespace KabukiProject.Services
                     existingTeacher.IsVerified = newTeacherData.IsVerified;
                     existingTeacher.Subjects = newTeacherData.Subjects;
                 }
-                _teacherStorage.SaveData(teachers, TeachersFilePath);
+                _teacherStorage.SaveData(_teachers, TeachersFilePath);
             }
             else if (updatedUser.Role == UserRole.Administrator)
             {
-                List<Administrator> administrators = _administratorStorage.LoadData(AdministratorsFilePath);
-                var existingAdmin = administrators.FirstOrDefault(a => a.Username == updatedUser.Username);
+                var existingAdmin = _administrators.FirstOrDefault(a => a.Username == updatedUser.Username);
                 if (existingAdmin != null && updatedUser is Administrator newAdminData)
                 {
-                    // Оновлюємо властивості адміністратора
                     existingAdmin.Password = newAdminData.Password;
                     existingAdmin.FirstName = newAdminData.FirstName;
                     existingAdmin.LastName = newAdminData.LastName;
                 }
-                _administratorStorage.SaveData(administrators, AdministratorsFilePath);
+                _administratorStorage.SaveData(_administrators, AdministratorsFilePath);
             }
         }
     }

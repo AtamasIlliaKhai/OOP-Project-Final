@@ -22,6 +22,7 @@ namespace KabukiProject
 
         protected override void OnExit(ExitEventArgs e)
         {
+            _userService?.SaveAllData();
             base.OnExit(e);
         }
     }

@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using KabukiProject.Enums; //UserRole
-using KabukiProject.Models; //User Student Teacher model
-using KabukiProject.Services; //Юзер скервіс
-using KabukiProject.Views; //Навігація
+using KabukiProject.Enums; // UserRole
+using KabukiProject.Models; // User, Student, Teacher models
+using KabukiProject.Services; // UserService
+using KabukiProject.Views; // Navigation views
 
 namespace KabukiProject.ViewModels
 {
@@ -71,69 +71,92 @@ namespace KabukiProject.ViewModels
             _userService = new UserService();
             RegisterCommand = new RelayCommand(ExecuteRegister, CanExecuteRegister);
             NavigateToLoginCommand = new RelayCommand(ExecuteNavigateToLogin);
-            SelectedRole = "Учень"; // Default selection
+            SelectedRole = "Учень"; // Значення за замовчуванням
         }
 
         private bool CanExecuteRegister(object parameter)
         {
+            // Перевіряємо, чи всі необхідні поля заповнені та паролі співпадають.
             return !string.IsNullOrWhiteSpace(Username) &&
                    !string.IsNullOrWhiteSpace(Password) &&
                    Password == ConfirmPassword &&
                    !string.IsNullOrWhiteSpace(SelectedRole);
         }
 
-        // ПЕРЕДАЄМО ВІКНО ЯК ПАРАМЕТР
         private void ExecuteRegister(object parameter)
         {
             if (parameter is Window currentWindow)
             {
+                // Перевірка на співпадіння паролів
                 if (Password != ConfirmPassword)
                 {
                     MessageBox.Show("Паролі не співпадають!", "Помилка реєстрації", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
 
-                if (_userService.IsUsernameTaken(Username))
-                {
-                    MessageBox.Show("Ім'я користувача вже зайняте!", "Помилка реєстрації", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-
+                // Логіка створення нового користувача відповідно до обраної ролі
                 User newUser;
-                UserRole role = SelectedRole == "Учень" ? UserRole.Student : UserRole.Teacher; // Припускаємо, що SelectedRole завжди буде "Учень" або "Викладач"
+                // Визначаємо UserRole на основі SelectedRole з ComboBox
+                UserRole role = SelectedRole == "Учень" ? UserRole.Student : UserRole.Teacher;
 
                 if (role == UserRole.Student)
                 {
-                    newUser = new Student { Username = Username, Password = Password, Role = UserRole.Student };
+                    // Створюємо новий об'єкт Student і ПОВНІСТЮ ініціалізуємо всі його властивості.
+                    // Це КЛЮЧОВО для коректної серіалізації в JSON.
+                    newUser = new Student
+                    {
+                        Username = Username,
+                        Password = Password, // Паролі слід хешувати в реальному застосунку для безпеки!
+                        Role = UserRole.Student,
+                        FirstName = "",     // Ініціалізуємо порожнім рядком
+                        LastName = "",      // Ініціалізуємо порожнім рядком
+                        Email = "",         // Ініціалізуємо порожнім рядком
+                        Balance = 0.00m     // Ініціалізуємо нулем
+                    };
                 }
-                else // UserRole.Teacher
+                else // UserRole.Teacher (за припущенням, що інших ролей тут немає)
                 {
-                    newUser = new Teacher { Username = Username, Password = Password, Role = UserRole.Teacher, IsVerified = false };
+                    // Створюємо новий об'єкт Teacher і ПОВНІСТЮ ініціалізуємо всі його властивості.
+                    // Це КЛЮЧОВО для коректної серіалізації в JSON.
+                    newUser = new Teacher
+                    {
+                        Username = Username,
+                        Password = Password, // Паролі слід хешувати в реальному застосунку для безпеки!
+                        Role = UserRole.Teacher,
+                        IsVerified = false,  // За замовчуванням викладач не верифікований при реєстрації
+                        FirstName = "",      // Ініціалізуємо порожнім рядком
+                        LastName = "",       // Ініціалізуємо порожнім рядком
+                        Description = "",    // Ініціалізуємо порожнім рядком
+                        PricePerHour = 0.00m, // Ініціалізуємо нулем
+                        Subjects = new List<string>(), // Ініціалізуємо порожнім списком
+                        PhotoPath = ""       // Ініціалізуємо порожнім рядком
+                    };
                 }
 
+                // Спроба реєстрації користувача через UserService
                 if (_userService.RegisterUser(newUser))
                 {
                     MessageBox.Show($"Користувач '{Username}' успішно зареєстрований як {SelectedRole}!", "Реєстрація успішна", MessageBoxButton.OK, MessageBoxImage.Information);
-                    // Перенаправлення на Login після успішної реєстрації
+                    // Після успішної реєстрації перенаправляємо на вікно входу
                     ExecuteNavigateToLogin(currentWindow); // Передаємо поточне вікно для закриття
                 }
-                else
-                {
-                    MessageBox.Show("Помилка реєстрації користувача.", "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                // Якщо реєстрація не вдалася (наприклад, ім'я користувача вже зайняте), повідомлення про помилку показано з UserService.
             }
         }
 
-        // ПЕРЕДАЄМО ВІКНО ЯК ПАРАМЕТР
         private void ExecuteNavigateToLogin(object parameter)
         {
             if (parameter is Window currentWindow)
             {
+                // Створюєм новоє вікно входу та відображаєм його
                 var loginView = new LoginView();
                 loginView.Show();
-                // Важливо: Оновити Application.Current.MainWindow на нове вікно
+
+                // Оновлюєм глвнее вікно застосунку, для норм роботи та не дать проблемам з закриттям/управлінням вікнами.
                 Application.Current.MainWindow = loginView;
-                currentWindow.Close(); // Закрити старе вікно
+
+                // Закриваємо поточне вікно реєстрації
+                currentWindow.Close();
             }
         }
     }
