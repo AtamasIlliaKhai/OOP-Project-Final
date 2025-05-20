@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using KabukiProject.Enums;
 using KabukiProject.Interfaces;
-using KabukiProject.Models; //User, Student, Teacher
+using KabukiProject.Models; // User, Student, Teacher
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -165,7 +165,7 @@ namespace KabukiProject.Services
                     existingTeacher.PhotoPath = newTeacherData.PhotoPath;
                     existingTeacher.IsVerified = newTeacherData.IsVerified;
                     existingTeacher.Subjects = newTeacherData.Subjects;
-                    // Додайте інші специфічні для викладача властивості, які потрібно оновити
+                    // Щось ще добавить
                 }
                 _teacherStorage.SaveData(teachers, TeachersFilePath); // Передаємо filePath
             }
