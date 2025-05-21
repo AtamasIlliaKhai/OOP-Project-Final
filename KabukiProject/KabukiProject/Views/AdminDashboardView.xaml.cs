@@ -11,6 +11,8 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using KabukiProject.Models; // Для передачі об'єкта User
+using KabukiProject.ViewModels;
 
 namespace KabukiProject.Views
 {
@@ -19,9 +21,17 @@ namespace KabukiProject.Views
     /// </summary>
     public partial class AdminDashboardView : Window
     {
+        public AdminDashboardView(User adminUser)
+        {
+            InitializeComponent();
+            this.DataContext = new AdminDashboardViewModel(adminUser);
+        }
+
         public AdminDashboardView()
         {
             InitializeComponent();
+            // Встановлюємо DataContext з фіктивними даними для зручності дизайнера
+            this.DataContext = new AdminDashboardViewModel();
         }
     }
 }

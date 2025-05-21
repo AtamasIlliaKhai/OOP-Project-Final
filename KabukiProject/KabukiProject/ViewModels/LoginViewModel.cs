@@ -57,7 +57,6 @@ namespace KabukiProject.ViewModels
         {
             if (parameter is Window currentWindow)
             {
-                // ВИПРАВЛЕНО: Змінено LoginUser на AuthenticateUser
                 User authenticatedUser = UserService.Instance.AuthenticateUser(Username, Password);
 
                 if (authenticatedUser != null)
@@ -67,20 +66,15 @@ namespace KabukiProject.ViewModels
                     Window nextWindow = null;
                     if (authenticatedUser.Role == UserRole.Student)
                     {
-                        // ПЕРЕДАЄМО ОБ'ЄКТ AUTHENTICATEDUSER ДО VIEWS/VIEWMODELS
                         nextWindow = new StudentDashboardView(authenticatedUser);
                     }
                     else if (authenticatedUser.Role == UserRole.Teacher)
                     {
-                        // ПЕРЕДАЄМО ОБ'ЄКТ AUTHENTICATEDUSER ДО VIEWS/VIEWMODELS
                         nextWindow = new TeacherDashboardView(authenticatedUser);
                     }
                     else if (authenticatedUser.Role == UserRole.Administrator)
                     {
-                        //TODO: Створити AdminDashboardView пізніше
-                        // Якщо AdminDashboardView також матиме конструктор з User: nextWindow = new AdminDashboardView(authenticatedUser);
-                        MessageBox.Show("Адміністраторська панель ще не реалізована.", "Інформація", MessageBoxButton.OK, MessageBoxImage.Information);
-                        return; // Залишимося на поточному вікні, доки не буде адмін-панелі
+                        nextWindow = new AdminDashboardView(authenticatedUser);
                     }
 
                     if (nextWindow != null)
@@ -88,6 +82,11 @@ namespace KabukiProject.ViewModels
                         nextWindow.Show();
                         Application.Current.MainWindow = nextWindow;
                         currentWindow.Close();
+                    }
+                    else
+                    {
+                        // Треба, але вже не буде треба
+                        MessageBox.Show("Не вдалося відкрити панель. Невідома роль користувача або помилка ініціалізації.", "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
                 else
