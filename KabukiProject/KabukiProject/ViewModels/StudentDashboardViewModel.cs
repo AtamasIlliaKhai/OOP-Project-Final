@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
+using KabukiProject.ViewModels;
 
 namespace KabukiProject.ViewModels
 {
@@ -25,7 +26,7 @@ namespace KabukiProject.ViewModels
                 FirstName = _currentStudent?.FirstName;
                 LastName = _currentStudent?.LastName;
                 CurrentUserBalance = _currentStudent?.Balance ?? 0;
-                LoadStudentLessons();
+                LoadStudentLessons(); // Завантажуємо уроки при зміні студента
             }
         }
 
@@ -66,7 +67,7 @@ namespace KabukiProject.ViewModels
             {
                 _searchQuery = value;
                 OnPropertyChanged();
-                ExecuteSearchTeachers(null);
+                ExecuteSearchTeachers(null); // Автоматичний пошук при зміні запиту
             }
         }
 
@@ -96,9 +97,9 @@ namespace KabukiProject.ViewModels
             }
         }
 
-        // Для вкладки "Мої уроки"
-        private ObservableCollection<Lesson> _studentLessons;
-        public ObservableCollection<Lesson> StudentLessons
+        // Для вкладки "Мої уроки" - ТЕПЕР ObservableCollection<LessonDisplayViewModel>
+        private ObservableCollection<LessonDisplayViewModel> _studentLessons;
+        public ObservableCollection<LessonDisplayViewModel> StudentLessons
         {
             get => _studentLessons;
             set
@@ -111,24 +112,26 @@ namespace KabukiProject.ViewModels
         // Команди
         public RelayCommand LogoutCommand { get; private set; }
         public RelayCommand SearchTeachersCommand { get; private set; }
-        public RelayCommand TopUpBalanceCommand { get; private set; } 
+        public RelayCommand TopUpBalanceCommand { get; private set; }
 
         private List<Teacher> _allTeachers;
 
+        // Основний конструктор для входу користувача
         public StudentDashboardViewModel(User loggedInUser)
         {
             // Ініціалізуємо властивості
             FoundTeachers = new ObservableCollection<Teacher>();
-            StudentLessons = new ObservableCollection<Lesson>();
+            // Виправлено: ініціалізуємо StudentLessons як LessonDisplayViewModel
+            StudentLessons = new ObservableCollection<LessonDisplayViewModel>();
 
             // Ініціалізуємо команди
             LogoutCommand = new RelayCommand(ExecuteLogout);
             SearchTeachersCommand = new RelayCommand(ExecuteSearchTeachers, CanExecuteSearchTeachers);
-            TopUpBalanceCommand = new RelayCommand(ExecuteTopUpBalance); 
+            TopUpBalanceCommand = new RelayCommand(ExecuteTopUpBalance);
 
             if (loggedInUser is Student student)
             {
-                CurrentStudent = student; 
+                CurrentStudent = student;
             }
             else
             {
@@ -140,15 +143,14 @@ namespace KabukiProject.ViewModels
             }
 
             _allTeachers = UserService.Instance.GetAllTeachers();
-
-            ExecuteSearchTeachers(null);
+            ExecuteSearchTeachers(null); // Виконуємо початковий пошук при завантаженні
         }
+
 
         public StudentDashboardViewModel()
         {
-
             FoundTeachers = new ObservableCollection<Teacher>();
-            StudentLessons = new ObservableCollection<Lesson>();
+            StudentLessons = new ObservableCollection<LessonDisplayViewModel>();
 
             LogoutCommand = new RelayCommand(ExecuteLogout);
             SearchTeachersCommand = new RelayCommand(ExecuteSearchTeachers, CanExecuteSearchTeachers);
@@ -161,7 +163,7 @@ namespace KabukiProject.ViewModels
                 FirstName = "Іван",
                 LastName = "Студентенко",
                 Role = UserRole.Student,
-                Balance = 1500.00m 
+                Balance = 1500.00m
             };
 
             _allTeachers = UserService.Instance.GetAllTeachers();
@@ -173,9 +175,8 @@ namespace KabukiProject.ViewModels
                     new Teacher { Id = "test_teacher_2", FirstName = "Петро", LastName = "Сидоров", PricePerHour = 300m, Description = "Фахівець з програмування.", Subjects = new List<string> { "Програмування", "ІТ" }, IsVerified = true }
                 };
             }
-            ExecuteSearchTeachers(null); 
-
-         }
+            ExecuteSearchTeachers(null);
+        }
 
         private void LoadStudentLessons()
         {
@@ -183,24 +184,20 @@ namespace KabukiProject.ViewModels
             if (CurrentStudent != null)
             {
                 var lessons = LessonService.Instance.GetLessonsByStudentId(CurrentStudent.Id)
-                                          .OrderByDescending(l => l.DateTime); // Сортуємо від нових до старих
+                                                     .OrderByDescending(l => l.DateTime);
+
                 foreach (var lesson in lessons)
                 {
                     var teacher = UserService.Instance.GetUserById(lesson.TeacherId) as Teacher;
-                    if (teacher != null)
-                    {
-
-                    }
-                    StudentLessons.Add(lesson);
+                    StudentLessons.Add(new LessonDisplayViewModel(lesson, teacher));
                 }
             }
         }
 
         private bool CanExecuteSearchTeachers(object parameter)
         {
-            return true; 
+            return true; // Пошук завжди доступний
         }
-
 
         private void ExecuteSearchTeachers(object parameter)
         {
@@ -251,18 +248,16 @@ namespace KabukiProject.ViewModels
 
             teacherProfileViewModel.LessonBooked += () =>
             {
-                // Оновлюємо баланс студента (якщо він міг змінитися)
                 var updatedStudent = UserService.Instance.GetUserById(CurrentStudent.Id) as Student;
                 if (updatedStudent != null)
                 {
-                    CurrentStudent = updatedStudent; // Оновлюємо всю властивість
+                    CurrentStudent = updatedStudent; 
                 }
-                LoadStudentLessons(); // Перезавантажуємо уроки студента
+                LoadStudentLessons();
             };
 
-            teacherProfileView.ShowDialog(); // Відкриваємо модально
+            teacherProfileView.ShowDialog();
 
-            // Після закриття вікна профілю викладача, знімаємо виділення у списку
             SelectedTeacher = null;
         }
 
