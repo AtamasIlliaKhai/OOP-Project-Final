@@ -78,8 +78,7 @@ namespace KabukiProject.ViewModels
                     else if (authenticatedUser.Role == UserRole.Administrator)
                     {
                         //TODO: Створити AdminDashboardView пізніше
-                        // Якщо AdminDashboardView також матиме конструктор з User:
-                        // nextWindow = new AdminDashboardView(authenticatedUser);
+                        // Якщо AdminDashboardView також матиме конструктор з User: nextWindow = new AdminDashboardView(authenticatedUser);
                         MessageBox.Show("Адміністраторська панель ще не реалізована.", "Інформація", MessageBoxButton.OK, MessageBoxImage.Information);
                         return; // Залишимося на поточному вікні, доки не буде адмін-панелі
                     }

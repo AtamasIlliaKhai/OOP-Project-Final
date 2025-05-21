@@ -5,8 +5,14 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:KabukiProject.Views"
         xmlns:viewmodels="clr-namespace:KabukiProject.ViewModels"
+        xmlns:converters="clr-namespace:KabukiProject.Converters"
         mc:Ignorable="d"
         Title="KabukiProject - Реєстрація" Height="500" Width="400">
+
+    <Window.Resources>
+        <converters:UserRoleDisplayNameConverter x:Key="UserRoleDisplayNameConverter"/>
+    </Window.Resources>
+
     <Window.DataContext>
         <viewmodels:RegistrationViewModel/>
     </Window.DataContext>
@@ -24,11 +30,15 @@
             <PasswordBox x:Name="ConfirmPasswordBox" Margin="0 0 0 20" PasswordChanged="ConfirmPasswordBox_PasswordChanged"/>
 
             <Label Content="Я реєструюсь як:"/>
-            <ComboBox SelectedItem="{Binding SelectedRole, Mode=TwoWay}" Margin="0 0 0 20">
-                <ComboBoxItem Content="Учень"/>
-                <ComboBoxItem Content="Викладач"/>
+            <ComboBox ItemsSource="{Binding UserRoles}"
+                      SelectedItem="{Binding SelectedRole, Mode=TwoWay}"
+                      Margin="0 0 0 20">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Converter={StaticResource UserRoleDisplayNameConverter}}"/>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
             </ComboBox>
-
             <Button Content="Зареєструватися" Command="{Binding RegisterCommand}"
                     CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}"
                     Margin="0 0 0 10"/>

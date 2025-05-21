@@ -1,13 +1,12 @@
-﻿using KabukiProject.Enums; // Все одно потрібен для UserRole
-using KabukiProject.Models;
-using KabukiProject.Services;
-using KabukiProject.Views;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
+using KabukiProject.Enums;
+using KabukiProject.Models;
+using KabukiProject.Services;
+using KabukiProject.Views;
 
 namespace KabukiProject.ViewModels
 {
@@ -25,9 +24,8 @@ namespace KabukiProject.ViewModels
             }
         }
 
-        // Ці властивості тепер зберігають сирі паролі (не хешовані)
         private string _password;
-        public string Password // ПРИВ'ЯЗУЄТЬСЯ ДО PasswordBox_PasswordChanged
+        public string Password
         {
             get => _password;
             set
@@ -39,7 +37,7 @@ namespace KabukiProject.ViewModels
         }
 
         private string _confirmPassword;
-        public string ConfirmPassword // ПРИВ'ЯЗУЄТЬСЯ ДО ConfirmPasswordBox_PasswordChanged
+        public string ConfirmPassword
         {
             get => _confirmPassword;
             set
@@ -50,8 +48,9 @@ namespace KabukiProject.ViewModels
             }
         }
 
-        private string _selectedRole; // ЗМІНЕНО: Тепер це string
-        public string SelectedRole
+        // ЗМІНА ТИПУ SELECTEDROLE
+        private UserRole _selectedRole; // ТИП UserRole
+        public UserRole SelectedRole
         {
             get => _selectedRole;
             set
@@ -61,6 +60,12 @@ namespace KabukiProject.ViewModels
                 RegisterCommand.RaiseCanExecuteChanged();
             }
         }
+        // КІНЕЦЬ ЗМІНИ ТИПУ SELECTEDROLE
+
+
+        // КОЛЕКЦІЯ РОЛЕЙ
+        public ObservableCollection<UserRole> UserRoles { get; set; }
+
 
         public RelayCommand RegisterCommand { get; private set; }
         public RelayCommand NavigateToLoginCommand { get; private set; }
@@ -70,11 +75,16 @@ namespace KabukiProject.ViewModels
             RegisterCommand = new RelayCommand(ExecuteRegister, CanExecuteRegister);
             NavigateToLoginCommand = new RelayCommand(ExecuteNavigateToLogin);
 
-            SelectedRole = "Учень";
+            UserRoles = new ObservableCollection<UserRole>(
+                Enum.GetValues(typeof(UserRole)) // Отримуємо всі значення enum UserRole
+                    .Cast<UserRole>()           // Перетворюємо їх на UserRole
+                    .Where(role => role != UserRole.Administrator) // Administrator в мінус
+            );
+
+            // Роль за замовчуванням Student
+            SelectedRole = UserRole.Student; // Встановлюємо Enum значення
         }
 
-        // Методи для обробки зміни паролів з PasswordBox
-        // Ці методи тепер просто встановлюють значення, без хешування
         public void OnPasswordChanged(string password)
         {
             Password = password;
@@ -87,15 +97,17 @@ namespace KabukiProject.ViewModels
 
         private bool CanExecuteRegister(object parameter)
         {
-            // Перевіряємо, чи всі поля заповнені та чи паролі співпадають
             bool passwordsMatch = Password == ConfirmPassword;
-            bool isRoleSelected = !string.IsNullOrWhiteSpace(SelectedRole); // Перевіряємо, чи обрано роль
+
+            // Перевіряємо, що SelectedRole не є значенням за замовчуванням (0)
+            // і не Administrator (якого ми вже виключили з UserRoles)
+            bool isRoleSelectedAndValid = SelectedRole != default(UserRole) && SelectedRole != UserRole.Administrator;
 
             return !string.IsNullOrWhiteSpace(Username) &&
                    !string.IsNullOrWhiteSpace(Password) &&
                    !string.IsNullOrWhiteSpace(ConfirmPassword) &&
                    passwordsMatch &&
-                   isRoleSelected;
+                   isRoleSelectedAndValid; // Нова перевірка
         }
 
         private void ExecuteRegister(object parameter)
@@ -107,38 +119,15 @@ namespace KabukiProject.ViewModels
             }
 
             User newUser = null;
-            UserRole roleToRegister;
+            UserRole roleToRegister = SelectedRole; // SelectedRole вже є потрібним Enum!
 
-            // --- ПОЧАТОК ЗМІН У ЦЬОМУ МЕТОДІ ---
-            string extractedRoleContent = null;
-            if (!string.IsNullOrWhiteSpace(SelectedRole))
+            // --- СПРОЩЕНИЙ SWITCH ---
+            switch (roleToRegister)
             {
-                // SelectedRole зараз виглядає як "System.Windows.Controls.ComboBoxItem: Учень"
-                // Нам потрібно знайти двокрапку і пробіл після неї, а потім взяти частину рядка
-                int colonIndex = SelectedRole.IndexOf(':');
-                if (colonIndex != -1 && colonIndex + 2 < SelectedRole.Length) // Перевіряємо, чи є ":" і достатньо символів після нього
-                {
-                    // Витягуємо вміст після ": " і видаляємо зайві пробіли
-                    extractedRoleContent = SelectedRole.Substring(colonIndex + 2).Trim();
-                }
-                else
-                {
-                    // Якщо формат несподіваний, або це просто "Учень" (менш ймовірно, але для безпеки),
-                    // просто використовуємо весь рядок після Trim
-                    extractedRoleContent = SelectedRole.Trim();
-                }
-            }
-            // --- КІНЕЦЬ ЗМІН У ЦЬОМУ МЕТОДІ ---
-
-
-            switch (extractedRoleContent) // Тепер switch працюватиме з "Учень" або "Викладач"
-            {
-                case "Учень":
-                    roleToRegister = UserRole.Student;
+                case UserRole.Student:
                     newUser = new Student { Username = Username, Password = Password, Role = roleToRegister, Balance = 0 };
                     break;
-                case "Викладач":
-                    roleToRegister = UserRole.Teacher;
+                case UserRole.Teacher:
                     newUser = new Teacher
                     {
                         Username = Username,
@@ -153,10 +142,14 @@ namespace KabukiProject.ViewModels
                         Subjects = new List<string>()
                     };
                     break;
-                default:
-                    MessageBox.Show("Будь ласка, оберіть коректну роль (Учень або Викладач).", "Помилка реєстрації", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return; // Виходимо, якщо роль не розпізнана
+                    // Default case не потрібен, якщо ми впевнені, що SelectedRole завжди буде Student або Teacher
+                    // Якщо SelectedRole з якихось причин дорівнює Administrator (хоча ми його виключили),
+                    // CanExecuteRegister вже мав би це заблокувати.
+                    // Можна додати throw new InvalidOperationException() для неможливих станів,
+                    // але для курсового, ймовірно, не обов'язково.
             }
+            // --- КІНЕЦЬ СПРОЩЕНОГО SWITCH ---
+
 
             if (newUser != null)
             {
@@ -164,6 +157,12 @@ namespace KabukiProject.ViewModels
                 MessageBox.Show("Реєстрація успішна! Тепер ви можете увійти.", "Успіх", MessageBoxButton.OK, MessageBoxImage.Information);
 
                 ExecuteNavigateToLogin(parameter);
+            }
+            else
+            {
+                // Цей блок може спрацювати, якщо newUser не був ініціалізований
+                // через неочікуване значення roleToRegister.
+                MessageBox.Show("Не вдалося створити користувача. Будь ласка, перевірте обрану роль.", "Помилка реєстрації", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
