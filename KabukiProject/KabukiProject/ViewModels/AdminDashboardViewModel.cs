@@ -98,16 +98,15 @@ namespace KabukiProject.ViewModels
         // Метод для завантаження всіх викладачів з UserService
         private void LoadTeachers()
         {
-            Teachers.Clear(); // Очищаємо поточну колекцію
-            var allUsers = UserService.Instance.GetAllUsers(); // Отримуємо всіх користувачів
+            Teachers.Clear();
+            var allUsers = UserService.Instance.GetAllUsers();
             foreach (var user in allUsers)
             {
-                if (user is Teacher teacher) // Фільтруємо лише викладачів
+                if (user is Teacher teacher)
                 {
-                    Teachers.Add(teacher); // Додаємо до ObservableCollection
+                    Teachers.Add(teacher);
                 }
             }
-            // Перевіряємо стан команд після завантаження даних
             VerifyTeacherCommand.RaiseCanExecuteChanged();
             EditTeacherCommand.RaiseCanExecuteChanged();
             DeleteTeacherCommand.RaiseCanExecuteChanged();
@@ -115,12 +114,11 @@ namespace KabukiProject.ViewModels
 
         // КОМАНДИ
 
-        // Логіка, коли кнопка "Верифікувати викладача" може бути активованою
+        // Логіка, коли кнопка "Верифікувати викладача"
         private bool CanExecuteVerifyTeacher(object parameter)
         {
             // Кнопка активна, якщо:
-            // 1. Вибрано викладача (`SelectedTeacher` не null)
-            // 2. Вибраний викладач ще не верифікований (!SelectedTeacher.IsVerified)
+            // Вибрано викладача (`SelectedTeacher` не null) або викладач ще не верифікований (!SelectedTeacher.IsVerified)
             return SelectedTeacher != null && !SelectedTeacher.IsVerified;
         }
 
@@ -133,9 +131,6 @@ namespace KabukiProject.ViewModels
                 UserService.Instance.UpdateUser(SelectedTeacher); // Оновлюємо викладача в UserService (це також викличе SaveUsers())
 
                 MessageBox.Show($"Викладач {SelectedTeacher.Username} успішно верифікований!", "Успіх", MessageBoxButton.OK, MessageBoxImage.Information);
-
-                // Оновлюємо UI після верифікації (перезавантаження списку або оновлення одного елемента)
-                // Для простоти та оновлення статусів CanExecute всіх кнопок, перезавантажимо весь список
                 LoadTeachers();
                 SelectedTeacher = null; // Знімаємо вибір після дії, щоб запобігти повторним натисканням
             }
@@ -148,15 +143,15 @@ namespace KabukiProject.ViewModels
             return SelectedTeacher != null;
         }
 
-        // Логіка виконання редагування викладача (А1)
+        // Логіка виконання редагування викладача
         private void ExecuteEditTeacher(object parameter)
         {
             if (SelectedTeacher != null)
             {
-                // Тут відкривати нове вікно або ShowDialog для редагування профілю викладача.
-                // Передача SelectedTeacher до нового ViewModel/View для редагування.
-                MessageBox.Show($"Відкриття вікна для редагування профілю викладача: {SelectedTeacher.Username}", "Редагування профілю", MessageBoxButton.OK, MessageBoxImage.Information);
-
+                EditTeacherView editView = new EditTeacherView(SelectedTeacher); 
+                editView.ShowDialog();
+                LoadTeachers();
+                SelectedTeacher = null;
             }
         }
 
@@ -167,7 +162,7 @@ namespace KabukiProject.ViewModels
             return SelectedTeacher != null;
         }
 
-        // Логіка виконання видалення викладача (А1)
+        // Логіка виконання видалення викладача
         private void ExecuteDeleteTeacher(object parameter)
         {
             if (SelectedTeacher != null)
@@ -184,9 +179,8 @@ namespace KabukiProject.ViewModels
                 {
                     UserService.Instance.DeleteUser(SelectedTeacher.Id);
                     MessageBox.Show($"Викладач {SelectedTeacher.Username} успішно видалений.", "Успіх", MessageBoxButton.OK, MessageBoxImage.Information);
-
-                    LoadTeachers(); // Перезавантажуємо список після видалення
-                    SelectedTeacher = null; // Знімаємо вибір
+                    LoadTeachers();
+                    SelectedTeacher = null;
                 }
             }
         }
@@ -197,10 +191,10 @@ namespace KabukiProject.ViewModels
             if (parameter is Window currentWindow)
             {
                 MessageBox.Show("Вихід з облікового запису адміністратора.", "Вихід", MessageBoxButton.OK, MessageBoxImage.Information);
-                var loginView = new LoginView(); // Створюємо нове вікно входу
+                var loginView = new LoginView();
                 loginView.Show();
-                Application.Current.MainWindow = loginView; // Встановлюємо його як головне вікно
-                currentWindow.Close(); // Закриваємо поточне вікно адміністратора
+                Application.Current.MainWindow = loginView;
+                currentWindow.Close();
             }
         }
     }
