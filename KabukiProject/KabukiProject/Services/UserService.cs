@@ -170,12 +170,16 @@ namespace KabukiProject.Services
 
         public List<Teacher> GetAllTeachers()
         {
-            return _users.OfType<Teacher>().ToList();
+            return _users.OfType<Teacher>().Where(t => t.IsVerified).ToList();
         }
 
         public User GetUserByUsername(string username)
         {
             return _users.FirstOrDefault(u => u.Username == username);
+        }
+        public User GetUserById(string id)
+        {
+            return _users.FirstOrDefault(u => u.Id == id);
         }
 
         public bool RegisterUser(User newUser)
