@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:KabukiProject.Views"
         xmlns:viewmodels="clr-namespace:KabukiProject.ViewModels"
-        xmlns:sys="clr-namespace:System;assembly=mscorlib"  mc:Ignorable="d"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib" mc:Ignorable="d"
         Title="Профіль викладача" Height="650" Width="500"
         WindowStartupLocation="CenterScreen">
 
@@ -68,21 +68,16 @@
                     <DatePicker Grid.Row="0" Grid.Column="1"
                                 SelectedDate="{Binding SelectedDate, UpdateSourceTrigger=PropertyChanged}"
                                 DisplayDateStart="{x:Static sys:DateTime.Today}"/>
+
                     <TextBlock Grid.Row="1" Grid.Column="0" Text="Час:" VerticalAlignment="Center" Margin="0 10 10 0"/>
                     <ComboBox Grid.Row="1" Grid.Column="1" Margin="0 10 0 0"
                               ItemsSource="{Binding AvailableTimeSlots}"
-                              SelectedItem="{Binding SelectedTime, UpdateSourceTrigger=PropertyChanged}"
-                              DisplayMemberPath="/"
-                              SelectedValuePath="/">
-                        <ComboBox Grid.Row="1" Grid.Column="1" Margin="0 10 0 0"
-          ItemsSource="{Binding AvailableTimeSlots}"
-          SelectedItem="{Binding SelectedTime, UpdateSourceTrigger=PropertyChanged}">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding StringFormat='hh\\:mm'}"/>
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
+                              SelectedItem="{Binding SelectedTime, UpdateSourceTrigger=PropertyChanged}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding StringFormat='hh\\:mm'}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
                     </ComboBox>
                 </Grid>
 

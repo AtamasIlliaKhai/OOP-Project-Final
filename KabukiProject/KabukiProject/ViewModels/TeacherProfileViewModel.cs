@@ -1,6 +1,6 @@
 ﻿using KabukiProject.Interfaces;
 using KabukiProject.Models;
-using KabukiProject.Services; // Додано для доступу до UserService
+using KabukiProject.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -12,7 +12,7 @@ namespace KabukiProject.ViewModels
     public class TeacherProfileViewModel : BaseViewModel
     {
         private Teacher _currentTeacher;
-        private Student _currentStudent; // Додано для зберігання поточного студента
+        private Student _currentStudent;
         public event Action LessonBooked;
 
         // Об'єкт викладача, профіль якого переглядається.
@@ -23,14 +23,13 @@ namespace KabukiProject.ViewModels
             {
                 _currentTeacher = value;
                 OnPropertyChanged();
-                // Оновлюємо всі залежні властивості, якщо Teacher змінюється
                 OnPropertyChanged(nameof(FirstName));
                 OnPropertyChanged(nameof(LastName));
                 OnPropertyChanged(nameof(Description));
                 OnPropertyChanged(nameof(PricePerHour));
                 OnPropertyChanged(nameof(Subjects));
                 OnPropertyChanged(nameof(PhotoPath));
-                BookLessonCommand.RaiseCanExecuteChanged(); // Оновлюємо стан команди при зміні викладача
+                BookLessonCommand?.RaiseCanExecuteChanged();
             }
         }
 
@@ -42,8 +41,7 @@ namespace KabukiProject.ViewModels
             {
                 _currentStudent = value;
                 OnPropertyChanged();
-                // Оновлюємо CanExecute команди, оскільки вона залежить від балансу студента
-                BookLessonCommand.RaiseCanExecuteChanged();
+                BookLessonCommand?.RaiseCanExecuteChanged();
             }
         }
 
@@ -52,14 +50,11 @@ namespace KabukiProject.ViewModels
         public string LastName => CurrentTeacher?.LastName;
         public string Description => CurrentTeacher?.Description;
         public decimal PricePerHour => CurrentTeacher?.PricePerHour ?? 0m;
-        // Змінено на ObservableCollection<string> дляSubjects
         public ObservableCollection<string> Subjects { get; set; }
         public string PhotoPath => CurrentTeacher?.PhotoPath;
 
         // Властивості для запису на урок
         private DateTime _selectedDate;
-
-        // Обрана учнем дата для уроку.
         public DateTime SelectedDate
         {
             get => _selectedDate;
@@ -67,15 +62,12 @@ namespace KabukiProject.ViewModels
             {
                 _selectedDate = value;
                 OnPropertyChanged();
-                // Коли дата змінюється, оновити доступні слоти часу
-                LoadAvailableTimeSlots(); // Викликаємо реальний метод
-                BookLessonCommand.RaiseCanExecuteChanged(); // Можливо, впливає на доступність кнопки
+                LoadAvailableTimeSlots();
+                BookLessonCommand?.RaiseCanExecuteChanged();
             }
         }
 
         private TimeSpan _selectedTime;
-
-        // Обраний учнем час для уроку.
         public TimeSpan SelectedTime
         {
             get => _selectedTime;
@@ -83,13 +75,11 @@ namespace KabukiProject.ViewModels
             {
                 _selectedTime = value;
                 OnPropertyChanged();
-                BookLessonCommand.RaiseCanExecuteChanged();
+                BookLessonCommand?.RaiseCanExecuteChanged();
             }
         }
 
         private ObservableCollection<TimeSpan> _availableTimeSlots;
-
-        // Колекція доступних слотів часу для обраної дати.
         public ObservableCollection<TimeSpan> AvailableTimeSlots
         {
             get => _availableTimeSlots;
@@ -102,12 +92,13 @@ namespace KabukiProject.ViewModels
 
         // Команди
         public RelayCommand BookLessonCommand { get; private set; }
-        public RelayCommand CloseCommand { get; private set; } // Команда для закриття вікна профілю
+        public RelayCommand CloseCommand { get; private set; }
 
-        // Конструктор TeacherProfileViewModel.
-        // Приймає об'єкт Teacher (чиї дані відображаються) та Student (хто бронює).
         public TeacherProfileViewModel(Teacher teacher, Student student)
         {
+            BookLessonCommand = new RelayCommand(ExecuteBookLesson, CanExecuteBookLesson);
+            CloseCommand = new RelayCommand(ExecuteClose);
+
             if (teacher == null)
             {
                 throw new ArgumentNullException(nameof(teacher), "Teacher object cannot be null for TeacherProfileViewModel.");
@@ -117,50 +108,53 @@ namespace KabukiProject.ViewModels
                 throw new ArgumentNullException(nameof(student), "Student object cannot be null for TeacherProfileViewModel.");
             }
 
-            CurrentTeacher = teacher;
-            CurrentStudent = student; // Зберігаємо посилання на студента
+            _currentTeacher = teacher;
+            _currentStudent = student;
 
-            // Ініціалізуємо Subject як ObservableCollection, копіюючи дані з Teacher
+            AvailableTimeSlots = new ObservableCollection<TimeSpan>();
             Subjects = new ObservableCollection<string>(teacher.Subjects ?? new List<string>());
 
-            // Ініціалізуємо властивості для запису на урок
-            SelectedDate = DateTime.Today; // Початково встановлюємо сьогоднішню дату
-            AvailableTimeSlots = new ObservableCollection<TimeSpan>();
+            OnPropertyChanged(nameof(CurrentTeacher));
+            OnPropertyChanged(nameof(CurrentStudent));
+            OnPropertyChanged(nameof(Subjects));
 
-            // Ініціалізуємо команди
-            BookLessonCommand = new RelayCommand(ExecuteBookLesson, CanExecuteBookLesson);
-            CloseCommand = new RelayCommand(ExecuteClose);
+            // Встановлюємо SelectedDate, що ВИКЛИЧЕ LoadAvailableTimeSlots(), тепер це безпечно
+            SelectedDate = DateTime.Today;
 
-            // Завантажуємо початкові доступні слоти часу
-            LoadAvailableTimeSlots();
+            BookLessonCommand.RaiseCanExecuteChanged(); // Оновлюємо стан команди після ініціалізації
         }
 
         // Конструктор без параметрів для дизайнера XAML
         public TeacherProfileViewModel()
         {
-            // Створюємо фіктивний об'єкт Teacher для відображення в дизайнері
-            CurrentTeacher = new Teacher
+            BookLessonCommand = new RelayCommand(ExecuteBookLesson, CanExecuteBookLesson);
+            CloseCommand = new RelayCommand(ExecuteClose);
+
+            _currentTeacher = new Teacher
             {
                 FirstName = "Ім'я",
                 LastName = "Викладача (Design)",
                 Description = "Це фіктивний опис для дизайнера. Викладач спеціалізується на різних предметах і має багаторічний досвід.",
                 PricePerHour = 250.00m,
                 Subjects = new List<string> { "Математика", "Фізика", "Програмування" },
-                PhotoPath = "/Assets/default_teacher_photo.png" // Шлях до фіктивного фото
+                PhotoPath = "/Assets/default_teacher_photo.png"
             };
-            // Створюємо фіктивний об'єкт Student для дизайнера
-            CurrentStudent = new Student
+            _currentStudent = new Student
             {
                 Username = "test_student",
-                Balance = 1000.00m // Фіктивний баланс студента
+                Balance = 1000.00m
             };
 
-            Subjects = new ObservableCollection<string>(CurrentTeacher.Subjects);
-            SelectedDate = DateTime.Today;
             AvailableTimeSlots = new ObservableCollection<TimeSpan>();
-            LoadDummyTimeSlots(); // Завантажуємо фіктивні слоти для дизайнера
-            BookLessonCommand = new RelayCommand(ExecuteBookLesson, CanExecuteBookLesson);
-            CloseCommand = new RelayCommand(ExecuteClose);
+            Subjects = new ObservableCollection<string>(CurrentTeacher.Subjects);
+
+            OnPropertyChanged(nameof(CurrentTeacher));
+            OnPropertyChanged(nameof(CurrentStudent));
+            OnPropertyChanged(nameof(Subjects));
+
+            SelectedDate = DateTime.Today;
+            LoadDummyTimeSlots();
+            BookLessonCommand.RaiseCanExecuteChanged();
         }
 
         // Методи для команд
@@ -192,7 +186,6 @@ namespace KabukiProject.ViewModels
                 if (result == MessageBoxResult.Yes)
                 {
                     CurrentStudent.Balance -= CurrentTeacher.PricePerHour;
-
                     UserService.Instance.UpdateUser(CurrentStudent);
 
                     var newLesson = new Lesson
@@ -203,7 +196,7 @@ namespace KabukiProject.ViewModels
                         Subject = CurrentTeacher.Subjects.FirstOrDefault(),
                         DateTime = SelectedDate.Date + SelectedTime,
                         Price = CurrentTeacher.PricePerHour,
-                        Status = LessonStatus.Scheduled 
+                        Status = Models.LessonStatus.Scheduled
                     };
 
                     LessonService.Instance.AddLesson(newLesson);
@@ -212,34 +205,37 @@ namespace KabukiProject.ViewModels
                                     $"З вашого рахунку списано {PricePerHour:C}.\n" +
                                     $"Ваш новий баланс: {CurrentStudent.Balance:C} грн.",
                                     "Успіх", MessageBoxButton.OK, MessageBoxImage.Information);
+
                     LessonBooked?.Invoke();
                     ExecuteClose(parameter);
                 }
             }
             else
             {
-                if (CurrentStudent.Balance < CurrentTeacher.PricePerHour)
+                if (CurrentStudent?.Balance < CurrentTeacher?.PricePerHour)
                 {
-                    MessageBox.Show("Недостатньо коштів на рахунку для бронювання цього уроку.", "Помилка бронювання", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show("Недостатньо коштів на рахунку для бронювання цього уроку. Будь ласка, поповніть баланс.", "Помилка бронювання", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                else if (SelectedTime == default(TimeSpan) || SelectedDate < DateTime.Today)
+                {
+                    MessageBox.Show("Будь ласка, оберіть коректну дату та час для уроку.", "Помилка бронювання", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
                 else
                 {
-                    MessageBox.Show("Будь ласка, оберіть дату та час для уроку.", "Помилка бронювання", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show("Не вдалося забронювати урок. Перевірте всі дані.", "Помилка бронювання", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
         }
 
         private void ExecuteClose(object parameter)
         {
-            // Метод для закриття вікна (якщо View передає Window як параметр)
             if (parameter is System.Windows.Window window)
             {
                 window.Close();
             }
         }
 
-        // Допоміжні методи
-
+        // Допоміжні методи для слотів часу
         private void LoadDummyTimeSlots()
         {
             AvailableTimeSlots.Clear();
@@ -253,26 +249,42 @@ namespace KabukiProject.ViewModels
             }
         }
 
-
         private void LoadAvailableTimeSlots()
         {
+            // Цей метод тепер безпечний, оскільки AvailableTimeSlots ініціалізовано в конструкторі
             AvailableTimeSlots.Clear();
 
+            int startHour = 9;
             if (SelectedDate.Date == DateTime.Today.Date)
             {
-                for (int hour = DateTime.Now.Hour + 1; hour <= 17; hour++)
-                {
-                    if (hour >= 9)
-                    {
-                        AvailableTimeSlots.Add(new TimeSpan(hour, 0, 0));
-                    }
-                }
+                startHour = Math.Max(9, DateTime.Now.Hour + 1);
             }
-            else if (SelectedDate.Date > DateTime.Today.Date)
+
+            if (SelectedDate.Date < DateTime.Today.Date)
             {
-                for (int hour = 9; hour <= 17; hour++)
+                SelectedTime = default(TimeSpan);
+                return;
+            }
+
+            if (CurrentTeacher == null)
+            {
+                SelectedTime = default(TimeSpan);
+                return;
+            }
+
+            var bookedLessons = LessonService.Instance.GetLessonsByTeacherId(CurrentTeacher.Id)
+                                                     .Where(l => l.DateTime.Date == SelectedDate.Date)
+                                                     .ToList();
+
+            for (int hour = startHour; hour <= 17; hour++)
+            {
+                TimeSpan potentialSlot = new TimeSpan(hour, 0, 0);
+
+                bool isSlotBooked = bookedLessons.Any(l => l.DateTime.TimeOfDay == potentialSlot);
+
+                if (!isSlotBooked)
                 {
-                    AvailableTimeSlots.Add(new TimeSpan(hour, 0, 0));
+                    AvailableTimeSlots.Add(potentialSlot);
                 }
             }
 
