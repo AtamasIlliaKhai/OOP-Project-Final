@@ -1,4 +1,5 @@
-﻿using KabukiProject.Models;
+﻿using KabukiProject.Interfaces;
+using KabukiProject.Models;
 using KabukiProject.Services; // Додано для доступу до UserService
 using System;
 using System.Collections.Generic;
@@ -12,6 +13,7 @@ namespace KabukiProject.ViewModels
     {
         private Teacher _currentTeacher;
         private Student _currentStudent; // Додано для зберігання поточного студента
+        public event Action LessonBooked;
 
         // Об'єкт викладача, профіль якого переглядається.
         public Teacher CurrentTeacher
@@ -165,8 +167,6 @@ namespace KabukiProject.ViewModels
 
         private bool CanExecuteBookLesson(object parameter)
         {
-            // Перевіряємо, чи обрано дату і час, чи обрана дата не в минулому,
-            // і чи достатньо коштів у студента
             return CurrentTeacher != null &&
                    CurrentStudent != null &&
                    SelectedDate >= DateTime.Today &&
@@ -178,33 +178,41 @@ namespace KabukiProject.ViewModels
         {
             if (CanExecuteBookLesson(null))
             {
+                if (CurrentTeacher.Subjects == null || !CurrentTeacher.Subjects.Any())
+                {
+                    MessageBox.Show("Викладач не має вказаних предметів для бронювання уроку.", "Помилка бронювання", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
                 var result = MessageBox.Show($"Ви дійсно хочете забронювати урок з {FirstName} {LastName} на {SelectedDate.ToShortDateString()} о {SelectedTime.ToString("hh\\:mm")} за {PricePerHour:C} грн?",
-                                     "Підтвердження бронювання",
-                                     MessageBoxButton.YesNo,
-                                     MessageBoxImage.Question);
+                                             "Підтвердження бронювання",
+                                             MessageBoxButton.YesNo,
+                                             MessageBoxImage.Question);
 
                 if (result == MessageBoxResult.Yes)
                 {
-                    // Логіка бронювання уроку
-                    // Зменшуємо баланс студента
                     CurrentStudent.Balance -= CurrentTeacher.PricePerHour;
-                    // ВИДАЛЕНО: CurrentTeacher.Balance += CurrentTeacher.PricePerHour;
-                    // Якщо викладач має отримувати кошти в системі, додайте логіку для цього тут.
-                    // Наприклад, запис транзакції, або оновлення якогось іншого поля заробітку викладача.
 
-                    // Зберігаємо оновлені дані студента через UserService.Instance
-                    // (Якщо викладач не має балансу, то його об'єкт не потребує збереження через оновлення балансу.
-                    // Але якщо інші поля викладача можуть змінюватися в майбутньому (наприклад, доступність),
-                    // то UpdateUser для CurrentTeacher може бути потрібним.)
                     UserService.Instance.UpdateUser(CurrentStudent);
-                    // Якщо вам потрібно зберегти факт бронювання або оновити розклад викладача,
-                    // ви можете викликати UserService.Instance.UpdateUser(CurrentTeacher); тут.
-                    // Але для вирішення поточної помилки, рядок з CurrentTeacher.Balance був зайвим.
 
-                    MessageBox.Show($"Урок з {FirstName} {LastName} успішно заброньовано!\nЗ вашого рахунку списано {PricePerHour:C}.\nВаш новий баланс: {CurrentStudent.Balance:C} грн.",
-                                     "Успіх", MessageBoxButton.OK, MessageBoxImage.Information);
+                    var newLesson = new Lesson
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        StudentId = CurrentStudent.Id,
+                        TeacherId = CurrentTeacher.Id,
+                        Subject = CurrentTeacher.Subjects.FirstOrDefault(),
+                        DateTime = SelectedDate.Date + SelectedTime,
+                        Price = CurrentTeacher.PricePerHour,
+                        Status = LessonStatus.Scheduled 
+                    };
 
-                    // Закриваємо вікно після успішного бронювання
+                    LessonService.Instance.AddLesson(newLesson);
+
+                    MessageBox.Show($"Урок з {FirstName} {LastName} успішно заброньовано!\n" +
+                                    $"З вашого рахунку списано {PricePerHour:C}.\n" +
+                                    $"Ваш новий баланс: {CurrentStudent.Balance:C} грн.",
+                                    "Успіх", MessageBoxButton.OK, MessageBoxImage.Information);
+                    LessonBooked?.Invoke();
                     ExecuteClose(parameter);
                 }
             }
@@ -232,16 +240,13 @@ namespace KabukiProject.ViewModels
 
         // Допоміжні методи
 
-        // Цей метод можна використовувати як заглушку, якщо немає реальної системи розкладу.
         private void LoadDummyTimeSlots()
         {
             AvailableTimeSlots.Clear();
-            // Припустимо, викладач доступний з 9:00 до 17:00 щогодини
             for (int hour = 9; hour <= 17; hour++)
             {
                 AvailableTimeSlots.Add(new TimeSpan(hour, 0, 0));
             }
-            // Вибираємо перший доступний слот за замовчуванням
             if (AvailableTimeSlots.Any())
             {
                 SelectedTime = AvailableTimeSlots.First();
@@ -249,24 +254,15 @@ namespace KabukiProject.ViewModels
         }
 
 
-        // TODO: Реальний метод для завантаження доступних слотів часу.
-        // Він повинен враховувати реальний розклад викладача та вже заброньовані уроки.
         private void LoadAvailableTimeSlots()
         {
             AvailableTimeSlots.Clear();
 
-            // Приклад реалізації:
-            // В реальному проекті ви б тут зверталися до сервісу розкладу,
-            // який би повертав вільні слоти для CurrentTeacher на SelectedDate.
-
-            // Наразі просто завантажуємо заглушку для демонстрації
-            // Якщо SelectedDate - це майбутня дата, можна показувати більше слотів
-            // Якщо SelectedDate - сьогодні, показуємо слоти, що ще не пройшли
             if (SelectedDate.Date == DateTime.Today.Date)
             {
-                for (int hour = DateTime.Now.Hour + 1; hour <= 17; hour++) // З наступної години
+                for (int hour = DateTime.Now.Hour + 1; hour <= 17; hour++)
                 {
-                    if (hour >= 9) // Переконаємось, що не раніше 9 ранку
+                    if (hour >= 9)
                     {
                         AvailableTimeSlots.Add(new TimeSpan(hour, 0, 0));
                     }
@@ -274,21 +270,19 @@ namespace KabukiProject.ViewModels
             }
             else if (SelectedDate.Date > DateTime.Today.Date)
             {
-                // Для майбутніх дат показуємо всі можливі слоти
                 for (int hour = 9; hour <= 17; hour++)
                 {
                     AvailableTimeSlots.Add(new TimeSpan(hour, 0, 0));
                 }
             }
 
-            // Вибираємо перший доступний слот за замовчуванням, якщо вони є
             if (AvailableTimeSlots.Any())
             {
                 SelectedTime = AvailableTimeSlots.First();
             }
             else
             {
-                SelectedTime = default(TimeSpan); // Скидаємо час, якщо слотів немає
+                SelectedTime = default(TimeSpan);
             }
         }
     }

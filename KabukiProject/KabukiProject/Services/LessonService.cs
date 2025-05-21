@@ -13,6 +13,27 @@ namespace KabukiProject.Services
 {
     public class LessonService
     {
+
+        private static readonly object _lock = new object();
+
+        public static LessonService Instance
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    lock (_lock)
+                    {
+                        if (_instance == null)
+                        {
+                            _instance = new LessonService();
+                        }
+                    }
+                }
+                return _instance;
+            }
+        }
+
         private static LessonService _instance;
         private readonly string _lessonsFilePath = Path.Combine(Directory.GetCurrentDirectory(), "lessons.json");
         private List<Lesson> _lessons;
@@ -22,19 +43,6 @@ namespace KabukiProject.Services
         {
             _lessons = new List<Lesson>();
             LoadLessons();
-        }
-
-        // Властивість для доступу до єдиного екземпляра сервісу
-        public static LessonService Instance
-        {
-            get
-            {
-                if (_instance == null)
-                {
-                    _instance = new LessonService();
-                }
-                return _instance;
-            }
         }
 
         private void LoadLessons()

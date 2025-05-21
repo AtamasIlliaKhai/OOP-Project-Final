@@ -16,5 +16,13 @@ namespace KabukiProject.Models
         public DateTime DateTime { get; set; }
         public decimal Price { get; set; }
         public LessonStatus Status { get; set; } = LessonStatus.Scheduled;
+        public string Subject { get; set; }
+    }
+    public enum LessonStatus
+    {
+        Scheduled,
+        Completed,
+        Cancelled,
+        Rescheduled
     }
 }

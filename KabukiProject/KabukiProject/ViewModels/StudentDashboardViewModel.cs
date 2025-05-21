@@ -268,8 +268,6 @@ namespace KabukiProject.ViewModels
 
         private void ExecuteTopUpBalance(object parameter)
         {
-            // Тут буде логіка для поповнення балансу.
-            // Можливо, відкриття нового вікна з формою для поповнення.
             MessageBox.Show($"Функціонал поповнення балансу ({CurrentUserBalance:C}) буде реалізовано пізніше.", "Інформація", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 

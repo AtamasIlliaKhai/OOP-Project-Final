@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using KabukiProject.Models;
 
 namespace KabukiProject.Interfaces
 {
@@ -14,12 +15,6 @@ namespace KabukiProject.Interfaces
         DateTime DateTime { get; set; }
         decimal Price { get; set; }
         LessonStatus Status { get; set; }
-    }
-
-    public enum LessonStatus
-    {
-        Scheduled,
-        Completed,
-        Canceled
+        string Subject { get; set; }
     }
 }
