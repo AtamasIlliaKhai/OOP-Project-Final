@@ -5,10 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using KabukiProject.Views; // навігація LoginView
-using KabukiProject.Models; // доступ до моделі Teacher та User
-using KabukiProject.Services; // доступ до UserService
+using KabukiProject.Models; // доступ до моделі Teacher та User, Lesson, Student
+using KabukiProject.Services; // доступ до UserService, LessonService
 using KabukiProject.Interfaces; // Додано для ITeacher на всяк випадок (якщо використовується)
-using System.Collections.ObjectModel; // Subjects
+using System.Collections.ObjectModel; // ObservableCollection
 
 namespace KabukiProject.ViewModels
 {
@@ -62,11 +62,20 @@ namespace KabukiProject.ViewModels
             set { _photoPath = value; OnPropertyChanged(); }
         }
 
-        /*
-          Для відображення списку предметів, які викладає вчитель.
-        ObservableCollection потрібна, щоб зміни в колекції (додавання/видалення)
-        автоматично оновлювали UI.
-        */
+        private ObservableCollection<Lesson> _teacherLessons;
+        public ObservableCollection<Lesson> TeacherLessons
+        {
+            get => _teacherLessons;
+            set
+            {
+                _teacherLessons = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasLessons)); // Додаємо OnPropertyChanged для нової властивості
+            }
+        }
+
+        public bool HasLessons => TeacherLessons != null && TeacherLessons.Any();
+
         public ObservableCollection<string> Subjects { get; set; }
 
         // Команди
@@ -82,18 +91,21 @@ namespace KabukiProject.ViewModels
             SaveProfileCommand = new RelayCommand(ExecuteSaveProfile, CanExecuteSaveProfile);
 
             Subjects = new ObservableCollection<string>(); // Ініціалізуємо колекцію
+            TeacherLessons = new ObservableCollection<Lesson>(); // Ініціалізуємо колекцію уроків
 
             // перевіряємо, чи переданий користувач є викладачем
             if (loggedInUser is Teacher teacher)
             {
                 _loggedInTeacher = teacher;
                 LoadTeacherProfile(teacher.Username); // Завантажуємо повний профіль за ім'ям
+
+                // Тепер, коли _loggedInTeacher ініціалізовано, завантажуємо уроки
+                LoadTeacherLessons();
             }
             else
             {
                 // Це не повинно статися, якщо логіка входу коректна, але на всяк випадок
                 MessageBox.Show("Помилка: Користувач не є викладачем.", "Помилка авторизації", MessageBoxButton.OK, MessageBoxImage.Error);
-                // Можливо, перенаправити назад на логін
                 var loginView = new LoginView();
                 loginView.Show();
                 Application.Current.MainWindow = loginView;
@@ -106,17 +118,40 @@ namespace KabukiProject.ViewModels
             LogoutCommand = new RelayCommand(ExecuteLogout);
             SaveProfileCommand = new RelayCommand(ExecuteSaveProfile, CanExecuteSaveProfile);
             Subjects = new ObservableCollection<string>();
+            TeacherLessons = new ObservableCollection<Lesson>(); // Ініціалізуємо для дизайнера
 
             // Фіктивні дані для дизайнера
             CurrentUserName = "Ім'я Викладача (Design)";
-            //CurrentUserBalance = 2500.00m; // Приклад балансу для дизайну - ВИДАЛЕНО
             FirstName = "Олена (Design)";
             LastName = "Викладач (Design)";
             Description = "Досвідчений викладач математики (Design)";
             PricePerHour = 300.00m;
-            PhotoPath = ""; // Задайте шлях до фіктивного фото, якщо потрібно
+            PhotoPath = "";
             Subjects.Add("Математика");
             Subjects.Add("Фізика");
+
+            // Фіктивні уроки для дизайнера
+            TeacherLessons.Add(new Lesson
+            {
+                DateTime = DateTime.Now.AddDays(1).AddHours(10),
+                Subject = "Математика",
+                Status = LessonStatus.Scheduled,
+                Student = new Student { Id = Guid.NewGuid().ToString(), Username = "Іван Петров", FirstName = "Іван", LastName = "Петров" }
+            });
+            TeacherLessons.Add(new Lesson
+            {
+                DateTime = DateTime.Now.AddDays(2).AddHours(14),
+                Subject = "Фізика",
+                Status = LessonStatus.Scheduled,
+                Student = new Student { Id = Guid.NewGuid().ToString(), Username = "Ольга Сидорова", FirstName = "Ольга", LastName = "Сидорова" }
+            });
+            TeacherLessons.Add(new Lesson
+            {
+                DateTime = DateTime.Now.AddDays(-5).AddHours(11),
+                Subject = "Хімія",
+                Status = LessonStatus.Completed,
+                Student = new Student { Id = Guid.NewGuid().ToString(), Username = "Сергій Коваленко", FirstName = "Сергій", LastName = "Коваленко" }
+            });
         }
 
 
@@ -124,21 +159,18 @@ namespace KabukiProject.ViewModels
 
         private void LoadTeacherProfile(string username)
         {
-            // Завантажуємо повні дані викладача з UserService.Instance
             User user = UserService.Instance.GetUserByUsername(username);
             if (user is Teacher teacher)
             {
                 _loggedInTeacher = teacher;
-                // Оновлюємо властивості ViewModel даними з моделі
-                CurrentUserName = teacher.Username; // логін
+                CurrentUserName = teacher.Username;
                 FirstName = teacher.FirstName;
                 LastName = teacher.LastName;
                 Description = teacher.Description;
                 PricePerHour = teacher.PricePerHour;
                 PhotoPath = teacher.PhotoPath;
-                // CurrentUserBalance = teacher.Balance; // Завантажуємо реальний баланс викладача - ВИДАЛЕНО
 
-                Subjects.Clear(); // Очищаємо перед завантаженням нових
+                Subjects.Clear();
                 if (teacher.Subjects != null)
                 {
                     foreach (var subject in teacher.Subjects)
@@ -149,9 +181,7 @@ namespace KabukiProject.ViewModels
             }
             else
             {
-                // Якщо користувача не знайдено або він не викладач (після аутентифікації, це помилка)
                 MessageBox.Show("Не вдалося завантажити профіль викладача. Можливо, дані пошкоджені.", "Помилка завантаження", MessageBoxButton.OK, MessageBoxImage.Error);
-                // Ініціалізуємо порожніми значеннями або перенаправляємо
                 FirstName = "";
                 LastName = "";
                 Description = "";
@@ -161,30 +191,51 @@ namespace KabukiProject.ViewModels
             }
         }
 
+        // НОВИЙ МЕТОД ДЛЯ ЗАВАНТАЖЕННЯ УРОКІВ
+        private void LoadTeacherLessons()
+        {
+            if (_loggedInTeacher == null)
+            {
+                TeacherLessons.Clear();
+                return;
+            }
+
+            var allLessons = LessonService.Instance.GetLessonsByTeacherId(_loggedInTeacher.Id)
+                                                    .OrderBy(l => l.DateTime) // Сортуємо за датою/часом
+                                                    .ToList();
+
+            TeacherLessons.Clear(); // Очищаємо поточну колекцію перед оновленням
+
+            foreach (var lesson in allLessons)
+            {
+                lesson.Student = UserService.Instance.GetUserById(lesson.StudentId) as Student;
+                TeacherLessons.Add(lesson);
+            }
+
+            OnPropertyChanged(nameof(HasLessons)); // Оновлюємо стан для UI
+        }
+
+
         private bool CanExecuteSaveProfile(object parameter)
         {
-            // Умови, за яких кнопка "Зберегти" буде активною
-            // Додано перевірку на наявність хоча б одного предмету
             return !string.IsNullOrWhiteSpace(FirstName) &&
                    !string.IsNullOrWhiteSpace(LastName) &&
                    !string.IsNullOrWhiteSpace(Description) &&
-                   PricePerHour > 0 && // Ціна більше 0
-                   Subjects.Any(); // Викладач повинен мати хоча б один предмет
+                   PricePerHour > 0 &&
+                   Subjects.Any();
         }
 
         private void ExecuteSaveProfile(object parameter)
         {
             if (_loggedInTeacher != null)
             {
-                // Оновлюємо дані моделі викладача з властивостей ViewModel
                 _loggedInTeacher.FirstName = FirstName;
                 _loggedInTeacher.LastName = LastName;
                 _loggedInTeacher.Description = Description;
                 _loggedInTeacher.PricePerHour = PricePerHour;
                 _loggedInTeacher.PhotoPath = PhotoPath;
-                _loggedInTeacher.Subjects = Subjects.ToList(); // ObservableCollection назад у List
+                _loggedInTeacher.Subjects = Subjects.ToList();
 
-                // Зберігаємо оновленого викладача через UserService.Instance
                 UserService.Instance.UpdateUser(_loggedInTeacher);
 
                 MessageBox.Show("Профіль успішно збережено!", "Успіх", MessageBoxButton.OK, MessageBoxImage.Information);
